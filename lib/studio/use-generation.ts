@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { fileToBase64, resizeForAPI, getMediaType } from '@/lib/image-utils';
 import type { Issue } from '@/lib/visual-tester';
-import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType } from './types';
+import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, Session } from './types';
 import type { SelectedElement } from '@/components/preview/types';
 import { readSSEStream } from './sse-handlers';
 
@@ -135,7 +135,21 @@ export function useGeneration() {
     } finally { setPendingInstall(null); setIsGenerating(false); setGenStatus(''); }
   };
 
-  void genChars; // suppress unused
+  void genChars;
+
+  const loadSession = (session: Session) => {
+    setMessages(session.messages);
+    setGeneratedPage(session.generatedPage);
+    setPageHistory(session.pageHistory);
+  };
+
+  const resetSession = () => {
+    setMessages([]);
+    setInput('');
+    setGeneratedPage(null);
+    setPageHistory([]);
+    try { localStorage.removeItem('vibe-studio'); } catch { /* */ }
+  };
 
   return {
     messages, setMessages, input, setInput, isGenerating, genStatus,
@@ -144,5 +158,6 @@ export function useGeneration() {
     imageFile, setImageFile, selectedElement, setSelectedElement,
     creativityMode, setCreativityMode, pageType, setPageType,
     handleSend, handleUndo, handleApplyFixes, handleInstallDeps,
+    loadSession, resetSession,
   };
 }
