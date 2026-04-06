@@ -86,7 +86,7 @@ export async function orchestrateEdit(
 
   onEvent({ type: 'agent_done', agent: 'Planner', files: [] });
 
-  const agentEntries: { name: string; path: string }[] = [
+  let agentEntries: { name: string; path: string }[] = [
     ...components.map((c) => ({
       name: c,
       path: `app/(generated)/${params.slug}/components/${c}.tsx`,
@@ -97,7 +97,18 @@ export async function orchestrateEdit(
   ];
 
   if (agentEntries.length === 0) {
-    throw new Error('El coordinador no identificó archivos a modificar');
+    agentEntries = params.existingFiles
+      .filter((f) => f.path.includes('/components/') && f.path.endsWith('.tsx'))
+      .map((f) => ({
+        name: f.path.split('/').pop()!.replace('.tsx', ''),
+        path: f.path,
+      }));
+    const dataFile = params.existingFiles.find((f) => f.path.endsWith('data/content.ts'));
+    if (dataFile) agentEntries.push({ name: 'Datos', path: dataFile.path });
+  }
+
+  if (agentEntries.length === 0) {
+    throw new Error('No se encontraron archivos para modificar');
   }
 
   onEvent({ type: 'status', message: `Actualizando: ${agentEntries.map((e) => e.name).join(' · ')}` });

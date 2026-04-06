@@ -6,6 +6,19 @@ import type { Issue, DomMetrics, TestResult } from './types';
 export { analyzeWithConsultant } from './claude-analysis';
 export type { Issue, DomMetrics, TestResult } from './types';
 
+const MAX_SCREENSHOT_HEIGHT = 7000;
+
+async function captureScreenshot(page: import('playwright').Page, width: number): Promise<string> {
+  const fullHeight = await page.evaluate(() => document.body.scrollHeight);
+  const height = Math.min(fullHeight, MAX_SCREENSHOT_HEIGHT);
+  const buffer = await page.screenshot({
+    clip: { x: 0, y: 0, width, height },
+    type: 'jpeg',
+    quality: 80,
+  });
+  return buffer.toString('base64');
+}
+
 export async function testPage(
   slug: string,
   sourceFiles: { path: string; content: string }[] = []
@@ -14,7 +27,6 @@ export async function testPage(
   const consoleErrors: string[] = [];
 
   try {
-    // ── Desktop pass 1 ────────────────────────────────────────────────────
     const desktopCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const desktopPage = await desktopCtx.newPage();
     desktopPage.on('console', (msg) => {
@@ -24,25 +36,18 @@ export async function testPage(
     await desktopPage.goto(`http://localhost:3000/${slug}`, { waitUntil: 'networkidle', timeout: 20000 });
 
     const domMetrics = await collectDomMetrics(desktopPage, consoleErrors);
+    const desktopScreenshot = await captureScreenshot(desktopPage, 1440);
 
-    const desktopBuffer = await desktopPage.screenshot({ fullPage: true, type: 'jpeg', quality: 85 });
-    const desktopScreenshot = desktopBuffer.toString('base64');
-
-    // ── Desktop pass 2 (after 2s for animations) ──────────────────────────
     await desktopPage.waitForTimeout(2000);
-    const desktop2Buffer = await desktopPage.screenshot({ fullPage: true, type: 'jpeg', quality: 85 });
-    const desktopScreenshot2 = desktop2Buffer.toString('base64');
+    const desktopScreenshot2 = await captureScreenshot(desktopPage, 1440);
     await desktopCtx.close();
 
-    // ── Mobile pass ───────────────────────────────────────────────────────
     const mobileCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const mobilePage = await mobileCtx.newPage();
     await mobilePage.goto(`http://localhost:3000/${slug}`, { waitUntil: 'networkidle', timeout: 20000 });
-    const mobileBuffer = await mobilePage.screenshot({ fullPage: true, type: 'jpeg', quality: 85 });
-    const mobileScreenshot = mobileBuffer.toString('base64');
+    const mobileScreenshot = await captureScreenshot(mobilePage, 390);
     await mobileCtx.close();
 
-    // ── Auto-inject deterministic DOM issues ──────────────────────────────
     const domIssues: Issue[] = [];
     const ts = Date.now();
 
@@ -79,7 +84,6 @@ export async function testPage(
       });
     }
 
-    // ── Consultant analysis ───────────────────────────────────────────────
     const claudeIssues = await analyzeWithConsultant(
       desktopScreenshot,
       mobileScreenshot,
@@ -88,7 +92,6 @@ export async function testPage(
       sourceFiles
     );
 
-    // Merge: DOM issues first (facts), then Claude issues
     const issues = [
       ...domIssues,
       ...claudeIssues.filter(ci => {
