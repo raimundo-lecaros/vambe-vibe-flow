@@ -1,27 +1,20 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import Anthropic from '@anthropic-ai/sdk';
-import { CODEGEN_SYSTEM_PROMPT } from '@/lib/codegen-prompt';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { orchestrate, orchestrateEdit, type OrchestratorEvent } from '@/lib/orchestrator';
+import { writeAndFinish, type ParsedResponse } from './write-files';
 
 const CREATIVITY_PREFIXES: Record<string, string> = {
-  disruptive:
-    'Sé audaz. Layout no convencional. Al menos 1 componente tiene que ser algo inesperado en una landing típica.',
+  disruptive: 'Sé audaz. Layout no convencional. Al menos 1 componente tiene que ser algo inesperado en una landing típica.',
   corporate: 'Diseño limpio y conservador. Sin overlaps ni riesgos.',
   modern: 'Contemporáneo con personalidad. Mezcla fondos y formas.',
 };
 
-interface GeneratedFile {
-  path: string;
-  content: string;
-}
-
-interface ParsedResponse {
-  files: GeneratedFile[];
-  slug: string;
-  summary: string;
+interface SelectedElement {
+  tag: string;
+  text: string;
+  classes: string[];
+  outerHTMLSnippet: string;
 }
 
 type MessageContentBlock =
@@ -33,40 +26,38 @@ interface ApiMessage {
   content: string | MessageContentBlock[];
 }
 
-function parseResponse(text: string): ParsedResponse {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('No JSON found in response');
-  return JSON.parse(jsonMatch[0]) as ParsedResponse;
-}
-
 function sse(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-async function streamClaude(
-  messages: ApiMessage[],
-  temperature: number,
-  onChunk: (text: string) => void
-): Promise<string> {
-  const stream = await client.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 16000,
-    temperature,
-    system: CODEGEN_SYSTEM_PROMPT,
-    messages: messages as Anthropic.MessageParam[],
-  });
-
-  let full = '';
-  for await (const chunk of stream) {
-    if (
-      chunk.type === 'content_block_delta' &&
-      chunk.delta.type === 'text_delta'
-    ) {
-      full += chunk.delta.text;
-      onChunk(chunk.delta.text);
+function makeOnEvent(resultRef: { value: ParsedResponse | null }, send: (data: unknown) => void) {
+  return (event: OrchestratorEvent) => {
+    if (event.type === 'status') send({ type: 'status', message: event.message });
+    else if (event.type === 'agent_start') send({ type: 'agent_start', agent: event.agent });
+    else if (event.type === 'agent_done') send({ type: 'agent_done', agent: event.agent, agentFiles: event.files });
+    else if (event.type === 'agent_error') send({ type: 'agent_error', agent: event.agent, message: event.message });
+    else if (event.type === 'agent_log') send({ type: 'agent_log', agent: event.agent, chunk: event.chunk });
+    else if (event.type === 'result') {
+      resultRef.value = { files: event.files, slug: event.slug, summary: event.summary, deps: event.newDeps };
     }
-  }
-  return full;
+  };
+}
+
+async function readExistingFiles(slugDir: string, slug: string): Promise<{ path: string; content: string }[]> {
+  const files: { path: string; content: string }[] = [];
+  try {
+    const entries = await fs.readdir(slugDir, { recursive: true });
+    for (const entry of entries) {
+      const entryStr = entry.toString();
+      if (entryStr.endsWith('.tsx') || entryStr.endsWith('.ts')) {
+        try {
+          const content = await fs.readFile(path.join(slugDir, entryStr), 'utf-8');
+          files.push({ path: `app/(generated)/${slug}/${entryStr}`, content });
+        } catch { /* skip */ }
+      }
+    }
+  } catch { /* directory doesn't exist yet */ }
+  return files;
 }
 
 export async function POST(request: NextRequest) {
@@ -74,145 +65,57 @@ export async function POST(request: NextRequest) {
 
   const readable = new ReadableStream({
     async start(controller) {
-      const send = (data: unknown) =>
-        controller.enqueue(encoder.encode(sse(data)));
+      const send = (data: unknown) => controller.enqueue(encoder.encode(sse(data)));
 
       try {
         const body = (await request.json()) as {
           messages: ApiMessage[];
           slug?: string;
+          currentSlug?: string;
           creativityMode?: string;
           pageType?: string;
           imageBase64?: string;
           mediaType?: string;
+          selectedElement?: SelectedElement;
         };
 
-        const {
-          messages,
-          slug: requestedSlug,
-          creativityMode = 'modern',
-          pageType,
-          imageBase64,
-          mediaType,
-        } = body;
-
+        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', pageType, imageBase64, mediaType, selectedElement } = body;
+        const projectRoot = process.cwd();
         const prefix = CREATIVITY_PREFIXES[creativityMode] ?? '';
         const temperature = creativityMode === 'disruptive' ? 0.8 : 0.3;
 
-        const anthropicMessages: ApiMessage[] = messages.map((m) => ({ ...m }));
-        const lastMsg = anthropicMessages[anthropicMessages.length - 1];
-
-        if (lastMsg && lastMsg.role === 'user') {
-          const originalText =
-            typeof lastMsg.content === 'string'
-              ? lastMsg.content
-              : (
-                  lastMsg.content.find(
-                    (c) => c.type === 'text'
-                  ) as { type: 'text'; text: string } | undefined
-                )?.text ?? '';
-
-          const prefixed = [
-            pageType ? `Tipo de página: ${pageType}` : '',
-            prefix,
-            originalText,
-          ]
-            .filter(Boolean)
-            .join('\n\n');
-
-          if (imageBase64) {
-            lastMsg.content = [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType ?? 'image/jpeg',
-                  data: imageBase64,
-                },
-              },
-              { type: 'text', text: prefixed },
-            ];
-          } else {
-            lastMsg.content = prefixed;
-          }
-        }
-
-        send({ type: 'status', message: 'Conectando con Claude…' });
-
-        let charCount = 0;
-        let responseText = '';
-
+        let installedDeps: string[] = [];
         try {
-          responseText = await streamClaude(
-            anthropicMessages,
-            temperature,
-            (chunk) => {
-              charCount += chunk.length;
-              send({ type: 'progress', chars: charCount });
-            }
-          );
-        } catch (streamErr) {
-          send({ type: 'status', message: `Error en stream, reintentando… (${String(streamErr)})` });
-          // fallback: non-streaming retry
-          const resp = await client.messages.create({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 16000,
-            temperature,
-            system: CODEGEN_SYSTEM_PROMPT,
-            messages: anthropicMessages as Anthropic.MessageParam[],
-          });
-          const tb = resp.content.find((c) => c.type === 'text');
-          responseText = tb && tb.type === 'text' ? tb.text : '';
+          const pkgRaw = await fs.readFile(path.join(projectRoot, 'package.json'), 'utf-8');
+          const pkg = JSON.parse(pkgRaw) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+          installedDeps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+        } catch { /* ignore */ }
+
+        const elementCtx = selectedElement
+          ? `Elemento específico a modificar:\n- Tipo: <${selectedElement.tag}>\n- Texto: "${selectedElement.text}"\n- Clases CSS: ${selectedElement.classes.join(' ')}\n- HTML: ${selectedElement.outerHTMLSnippet}`
+          : '';
+
+        const lastMsg = messages[messages.length - 1];
+        const userPromptText = typeof lastMsg?.content === 'string'
+          ? lastMsg.content
+          : (lastMsg?.content as MessageContentBlock[] | undefined)?.find((c) => c.type === 'text')?.text ?? '';
+
+        const fullPrompt = [elementCtx, pageType ? `Tipo de página: ${pageType}` : '', prefix, userPromptText].filter(Boolean).join('\n\n');
+        const resultRef: { value: ParsedResponse | null } = { value: null };
+        const onEvent = makeOnEvent(resultRef, send);
+
+        if (currentSlug) {
+          const slugDir = path.join(projectRoot, 'app/(generated)', currentSlug);
+          const existingFiles = await readExistingFiles(slugDir, currentSlug);
+          await orchestrateEdit({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType, existingFiles, slug: currentSlug }, onEvent);
+          if (resultRef.value) await writeAndFinish(send, resultRef.value, installedDeps, requestedSlug ?? currentSlug, projectRoot);
+        } else {
+          await orchestrate({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType }, onEvent);
+          if (resultRef.value) await writeAndFinish(send, resultRef.value, installedDeps, requestedSlug, projectRoot);
         }
-
-        send({ type: 'status', message: 'Parseando archivos…' });
-
-        let parsed: ParsedResponse;
-        try {
-          parsed = parseResponse(responseText);
-        } catch (parseErr) {
-          // Retry with error context
-          send({ type: 'status', message: 'Reintentando parseo…' });
-          anthropicMessages.push({ role: 'assistant', content: responseText });
-          anthropicMessages.push({
-            role: 'user',
-            content: `Error al parsear: ${String(parseErr)}. Respondé SOLO con el JSON válido, sin texto adicional.`,
-          });
-          charCount = 0;
-          responseText = await streamClaude(anthropicMessages, temperature, (chunk) => {
-            charCount += chunk.length;
-            send({ type: 'progress', chars: charCount });
-          });
-          parsed = parseResponse(responseText);
-        }
-
-        const slug = parsed.slug || requestedSlug || 'generated-page';
-        const projectRoot = process.cwd();
-
-        send({ type: 'status', message: `Escribiendo ${parsed.files.length} archivo(s)…` });
-
-        const writtenFiles: { path: string; lines: number }[] = [];
-        for (const file of parsed.files) {
-          const absolutePath = path.join(projectRoot, file.path);
-          await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-          await fs.writeFile(absolutePath, file.content, 'utf-8');
-          writtenFiles.push({ path: file.path, lines: file.content.split('\n').length });
-          send({ type: 'status', message: `Escribió ${file.path}` });
-        }
-
-        send({
-          type: 'done',
-          slug,
-          previewUrl: `/${slug}`,
-          files: writtenFiles,
-          summary: parsed.summary,
-        });
       } catch (error) {
         console.error('[generate] error:', error);
-        send({
-          type: 'error',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        });
+        send({ type: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
       } finally {
         controller.close();
       }
@@ -220,10 +123,6 @@ export async function POST(request: NextRequest) {
   });
 
   return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
   });
 }
