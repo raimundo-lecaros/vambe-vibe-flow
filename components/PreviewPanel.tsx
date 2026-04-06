@@ -6,7 +6,6 @@ import { sortAgents, C } from './preview/constants';
 import { useSelectionMode } from './preview/hooks/use-selection-mode';
 import { useQATest } from './preview/hooks/use-qa-test';
 import AgentProgress from './preview/AgentProgress';
-import AgentOverlay from './preview/AgentOverlay';
 import Toolbar from './preview/Toolbar';
 import FilesPanel from './preview/FilesPanel';
 import QAPanel from './preview/QAPanel';
@@ -126,13 +125,6 @@ export default function PreviewPanel({
           </div>
         )}
 
-        {isEditMode && (
-          <AgentOverlay
-            agents={agents}
-            agentStatuses={agentStatuses}
-            genStatus={genStatus}
-          />
-        )}
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg) } }' }} />

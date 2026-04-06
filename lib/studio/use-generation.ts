@@ -98,10 +98,11 @@ export function useGeneration() {
     resetAgents();
     try {
       const apiMessages = [...messages, { role: 'user' as const, content: detail }];
+      const qaIssues = issues.map((i) => ({ component: i.component, description: i.description, fixHint: i.fixHint }));
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true }),
+        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true, qaIssues }),
       });
       await readSSEStream(res.body!.getReader(), setters);
     } catch (err) {
