@@ -15,4 +15,13 @@ export interface PendingInstall {
 export type CreativityMode = 'disruptive' | 'modern' | 'corporate';
 export type PageType = 'saas' | 'producto' | 'agencia' | 'ecommerce' | 'startup' | 'portfolio';
 
+export interface Session {
+  id: string;
+  summary: string;
+  createdAt: number;
+  generatedPage: GeneratedPage | null;
+  messages: Message[];
+  pageHistory: GeneratedPage[];
+}
+
 export type { GeneratedPage };

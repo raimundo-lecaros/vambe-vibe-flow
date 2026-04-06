@@ -1,14 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Clock } from 'lucide-react';
 import { C } from '@/lib/studio/constants';
 
 interface HeaderProps {
   onNewSession: () => void;
+  onToggleSessions: () => void;
+  showSessions: boolean;
+  sessionCount: number;
 }
 
-export default function Header({ onNewSession }: HeaderProps) {
+export default function Header({ onNewSession, onToggleSessions, showSessions, sessionCount }: HeaderProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
       <div
@@ -20,16 +23,28 @@ export default function Header({ onNewSession }: HeaderProps) {
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-semibold leading-none" style={{ color: C.text1 }}>Vambe VibeFlow</p>
       </div>
-      <button
-        onClick={onNewSession}
-        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md transition-colors"
-        style={{ color: C.text3, border: `1px solid ${C.border}` }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = C.text2; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = C.text3; }}
-      >
-        <Plus size={10} />
-        Nueva
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={onToggleSessions}
+          className="relative flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          style={{ color: showSessions ? C.accent : C.text3, border: `1px solid ${showSessions ? C.accent + '60' : C.border}` }}
+        >
+          <Clock size={10} />
+          {sessionCount > 0 && (
+            <span className="text-[9px] font-mono tabular-nums">{sessionCount}</span>
+          )}
+        </button>
+        <button
+          onClick={onNewSession}
+          className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          style={{ color: C.text3, border: `1px solid ${C.border}` }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = C.text2; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = C.text3; }}
+        >
+          <Plus size={10} />
+          Nueva
+        </button>
+      </div>
     </div>
   );
 }
