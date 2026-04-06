@@ -6,6 +6,7 @@ import { sortAgents, C } from './preview/constants';
 import { useSelectionMode } from './preview/hooks/use-selection-mode';
 import { useQATest } from './preview/hooks/use-qa-test';
 import AgentProgress from './preview/AgentProgress';
+import AgentOverlay from './preview/AgentOverlay';
 import Toolbar from './preview/Toolbar';
 import FilesPanel from './preview/FilesPanel';
 import QAPanel from './preview/QAPanel';
@@ -33,8 +34,9 @@ export default function PreviewPanel({
 
   const agents = sortAgents(Object.keys(agentStatuses));
   const isOrchestratedGeneration = agents.length > 0;
+  const isEditMode = isGenerating && isOrchestratedGeneration && generatedPage !== null;
 
-  if (isGenerating && isOrchestratedGeneration) {
+  if (isGenerating && isOrchestratedGeneration && !generatedPage) {
     return (
       <AgentProgress
         agents={agents}
@@ -112,17 +114,24 @@ export default function PreviewPanel({
         onApplyFixes={onApplyFixes}
       />
 
-      {/* Preview area */}
-      <div className="flex-1 overflow-auto flex items-start justify-center p-4" style={{ background: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
+      <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ background: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
         {viewMode === 'desktop' ? (
-          <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
+          <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <div className="border-[6px] border-zinc-600 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white" style={{ width: '390px' }}>
+            <div className="border-[6px] border-zinc-600 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white" style={{ width: '390px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }}>
               <iframe ref={iframeRef} key={`${generatedPage.slug}-mobile`} src={generatedPage.previewUrl} style={{ width: '390px', height: '844px', display: 'block', border: 'none' }} title="Mobile preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
             </div>
             <p className="text-zinc-600 text-xs">390 × 844 px</p>
           </div>
+        )}
+
+        {isEditMode && (
+          <AgentOverlay
+            agents={agents}
+            agentStatuses={agentStatuses}
+            genStatus={genStatus}
+          />
         )}
       </div>
 
