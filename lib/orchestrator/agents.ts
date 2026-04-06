@@ -58,10 +58,15 @@ ${faqInstruction}
 CLEAN CODE — OBLIGATORIO:
 - Sin comentarios de ningún tipo (ni //, ni /* */, ni JSDoc)
 - Máx 150 líneas por archivo. Si el componente las supera, extraé sub-componentes
-  en la misma carpeta components/ (ej: ${componentName}Card.tsx, ${componentName}Header.tsx)
-  y devolvelos como archivos separados en el output
+  en una SUBCARPETA con el nombre del componente:
+    components/${componentName}/index.tsx       ← componente principal
+    components/${componentName}/Card.tsx        ← sub-componente
+    components/${componentName}/Header.tsx      ← sub-componente
+  El archivo principal SIEMPRE es index.tsx dentro de la subcarpeta.
+  Los sub-componentes NO llevan el prefijo del padre: Card.tsx no ${componentName}Card.tsx
+  Devolvé cada archivo como un bloque ===FILE:=== separado.
 - Sin imports sin usar, sin variables sin usar, sin console.log
-- Nombres descriptivos: ${componentName}Card no Card, ${componentName}Item no Item
+- Nombres descriptivos y auto-explicativos
 
 IMPORTANTE:
 - Importá los datos así: import { ${exportName} } from '../data/content'
