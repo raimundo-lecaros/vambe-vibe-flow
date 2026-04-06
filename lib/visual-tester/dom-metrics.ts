@@ -47,7 +47,6 @@ export async function collectDomMetrics(
     return count;
   });
 
-  // ── Broken icon detection ─────────────────────────────────────────────────
   const knownIconNamesJSON = JSON.stringify([...KNOWN_ICON_NAMES]);
   const brokenIcons = await page.evaluate((knownIconNamesStr: string): string[] => {
     const knownIcons = new Set<string>(JSON.parse(knownIconNamesStr) as string[]);
@@ -60,39 +59,38 @@ export async function collectDomMetrics(
       const text = (node.textContent ?? '').trim();
       if (!text || text.length < 3 || text.length > 32) continue;
       if (!kebabPattern.test(text)) continue;
-
       const parent = node.parentElement;
       if (!parent) continue;
-
-      // Skip if inside an SVG (real icon)
       if (parent.closest('svg')) continue;
-      // Skip if the parent itself has an SVG child (icon + label pattern)
       if (parent.querySelector('svg')) continue;
-      // Skip code blocks and pre elements
       if (parent.closest('pre, code')) continue;
-      // Skip if element is hidden
       const style = window.getComputedStyle(parent);
       if (style.display === 'none' || style.visibility === 'hidden') continue;
-
-      // Prioritize: exact match with known icon list
-      if (knownIcons.has(text)) {
-        found.push(text);
-      }
+      if (knownIcons.has(text)) found.push(text);
     }
-
     return [...new Set(found)].slice(0, 15);
   }, knownIconNamesJSON);
 
-  // ── Overlap detection ─────────────────────────────────────────────────────
   const overlaps = await page.evaluate((): { elementA: string; elementB: string; overlapArea: number }[] => {
-    const SELECTORS = 'h1, h2, h3, button, a, input, nav, [class*="sticky"], [class*="fixed"], section > div';
+    const DECORATIVE_CLASSES = new Set(['absolute', 'fixed', 'relative', 'flex', 'grid', 'block', 'hidden', 'w-full', 'h-full', 'overflow-hidden', 'inset-0', 'pointer-events-none']);
+
+    function elementLabel(el: Element): string {
+      const tag = el.tagName.toLowerCase();
+      const meaningfulClass = Array.from(el.classList).find((c) => !DECORATIVE_CLASSES.has(c)) ?? '';
+      const text = (el.textContent ?? '').trim().slice(0, 18).replace(/\s+/g, ' ');
+      return `${tag}${meaningfulClass ? `.${meaningfulClass}` : ''}${text ? `:"${text}"` : ''}`;
+    }
+
+    const SELECTORS = 'h1, h2, h3, h4, button, a[href], input, nav, [role="button"]';
     const elements = Array.from(document.querySelectorAll(SELECTORS))
       .map((el) => {
+        const style = window.getComputedStyle(el);
+        if (style.pointerEvents === 'none') return null;
+        if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) < 0.1) return null;
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return null;
         if (rect.bottom < 0 || rect.top > window.innerHeight * 3) return null;
-        const label = `${el.tagName.toLowerCase()}${el.className ? '.' + (el.className as string).split(' ')[0] : ''}`;
-        return { el, rect, label };
+        return { el, rect, label: elementLabel(el) };
       })
       .filter(Boolean) as { el: Element; rect: DOMRect; label: string }[];
 
@@ -102,30 +100,17 @@ export async function collectDomMetrics(
       for (let j = i + 1; j < elements.length; j++) {
         const a = elements[i];
         const b = elements[j];
-
         if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
 
         const xOverlap = Math.max(0, Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left));
         const yOverlap = Math.max(0, Math.min(a.rect.bottom, b.rect.bottom) - Math.max(a.rect.top, b.rect.top));
         const area = xOverlap * yOverlap;
-
-        if (area > 200) {
-          results.push({ elementA: a.label, elementB: b.label, overlapArea: Math.round(area) });
-        }
+        if (area > 200) results.push({ elementA: a.label, elementB: b.label, overlapArea: Math.round(area) });
       }
     }
 
     return results.sort((a, b) => b.overlapArea - a.overlapArea).slice(0, 5);
   });
 
-  return {
-    hasHorizontalOverflow,
-    consoleErrors,
-    stuckAnimations,
-    smallTapTargets,
-    smallTextElements,
-    brokenImages,
-    brokenIcons,
-    overlaps,
-  };
+  return { hasHorizontalOverflow, consoleErrors, stuckAnimations, smallTapTargets, smallTextElements, brokenImages, brokenIcons, overlaps };
 }
