@@ -1,5 +1,5 @@
 import { client, extractText, parseFilesFromText } from './helpers';
-import { DESIGN_SYSTEM } from './design-system';
+import { buildCoordinatorSystem, buildEditSystem } from './edit-prompts';
 import type { GeneratedFile, OrchestrateEditParams, OrchestratorEvent } from './types';
 
 async function runEditCoordinator(
@@ -7,19 +7,14 @@ async function runEditCoordinator(
 ): Promise<{ components: string[]; updateData: boolean }> {
   const fileList = params.existingFiles.map((f) => `- ${f.path}`).join('\n');
 
-  const system = `Eres un arquitecto frontend. Analizás un pedido de cambio y determinás exactamente qué archivos de una landing page necesitan modificarse.
-Respondé SOLO con JSON válido sin markdown: { "components": ["Hero"], "updateData": false }
-- components: nombres PascalCase de los componentes (solo los de la carpeta components/) que necesitan cambios
-- updateData: true si hay cambios en textos, labels, datos o contenido en data/content.ts`;
-
   const resp = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 400,
     temperature: 0,
-    system,
+    system: buildCoordinatorSystem(!!params.fixMode),
     messages: [{
       role: 'user',
-      content: `Pedido de cambio:\n${params.userPrompt}\n\nArchivos existentes:\n${fileList}\n\nRespondé ÚNICAMENTE con el JSON.`,
+      content: `Pedido:\n${params.userPrompt}\n\nArchivos existentes:\n${fileList}\n\nRespondé ÚNICAMENTE con el JSON.`,
     }],
   });
 
@@ -42,26 +37,14 @@ async function runEditAgent(
   onChunk: (text: string) => void
 ): Promise<GeneratedFile[]> {
   const isTs = filePath.endsWith('.ts');
-  const system = `Eres un senior frontend engineer de Vambe AI.
-Modificás un archivo existente según el pedido del usuario. Devolvés el archivo COMPLETO.
+  const temperature = params.fixMode ? 0 : params.temperature;
+  const userMsg = `${params.fixMode ? 'Bugs a corregir' : 'Pedido'}: ${params.userPrompt}\n\nArchivo actual (${filePath}):\n\`\`\`${isTs ? 'ts' : 'tsx'}\n${existingContent}\n\`\`\`\n\nAplicá los cambios. Devolvé SOLO el bloque ===FILE:===...===ENDFILE===.`;
 
-${DESIGN_SYSTEM}
-
-IMPORTANTE:
-- Devolvé el archivo entero con los cambios aplicados, sin truncar
-- No cambiés lo que no necesita cambiar
-- Mantené imports, interfaces y estructura existente
-
-FORMATO:
-===FILE: ${filePath}===
-...código completo...
-===ENDFILE===`;
-  const userMsg = `Pedido: ${params.userPrompt}\n\nArchivo actual:\n\`\`\`${isTs ? 'ts' : 'tsx'}\n${existingContent}\n\`\`\`\n\nAplicá los cambios. Solo el bloque ===FILE:===...===ENDFILE===.`;
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 12000,
-    temperature: params.temperature,
-    system,
+    temperature,
+    system: buildEditSystem(filePath, !!params.fixMode),
     messages: [{ role: 'user', content: userMsg }],
   });
 
@@ -79,7 +62,7 @@ export async function orchestrateEdit(
   params: OrchestrateEditParams,
   onEvent: (event: OrchestratorEvent) => void
 ): Promise<void> {
-  onEvent({ type: 'status', message: 'Analizando cambios…' });
+  onEvent({ type: 'status', message: params.fixMode ? 'Identificando componentes afectados…' : 'Analizando cambios…' });
   onEvent({ type: 'agent_start', agent: 'Planner' });
 
   const { components, updateData } = await runEditCoordinator(params);
@@ -111,7 +94,7 @@ export async function orchestrateEdit(
     throw new Error('No se encontraron archivos para modificar');
   }
 
-  onEvent({ type: 'status', message: `Actualizando: ${agentEntries.map((e) => e.name).join(' · ')}` });
+  onEvent({ type: 'status', message: `Corrigiendo: ${agentEntries.map((e) => e.name).join(' · ')}` });
   for (const { name } of agentEntries) {
     onEvent({ type: 'agent_start', agent: name });
   }
@@ -144,7 +127,7 @@ export async function orchestrateEdit(
     type: 'result',
     files,
     slug: params.slug,
-    summary: `Actualizado: ${agentEntries.map((e) => e.name).join(', ')}`,
+    summary: `${params.fixMode ? 'Corregido' : 'Actualizado'}: ${agentEntries.map((e) => e.name).join(', ')}`,
     newDeps: [],
   });
 }

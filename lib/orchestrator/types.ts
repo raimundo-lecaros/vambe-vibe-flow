@@ -34,4 +34,5 @@ export interface OrchestrateParams {
 export interface OrchestrateEditParams extends OrchestrateParams {
   existingFiles: { path: string; content: string }[];
   slug: string;
+  fixMode?: boolean;
 }

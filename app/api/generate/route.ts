@@ -77,12 +77,13 @@ export async function POST(request: NextRequest) {
           imageBase64?: string;
           mediaType?: string;
           selectedElement?: SelectedElement;
+          fixMode?: boolean;
         };
 
-        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', pageType, imageBase64, mediaType, selectedElement } = body;
+        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', pageType, imageBase64, mediaType, selectedElement, fixMode } = body;
         const projectRoot = process.cwd();
-        const prefix = CREATIVITY_PREFIXES[creativityMode] ?? '';
-        const temperature = creativityMode === 'disruptive' ? 0.8 : 0.3;
+        const prefix = fixMode ? '' : (CREATIVITY_PREFIXES[creativityMode] ?? '');
+        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' ? 0.8 : 0.3);
 
         let installedDeps: string[] = [];
         try {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
         if (currentSlug) {
           const slugDir = path.join(projectRoot, 'app/(generated)', currentSlug);
           const existingFiles = await readExistingFiles(slugDir, currentSlug);
-          await orchestrateEdit({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType, existingFiles, slug: currentSlug }, onEvent);
+          await orchestrateEdit({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType, existingFiles, slug: currentSlug, fixMode }, onEvent);
           if (resultRef.value) await writeAndFinish(send, resultRef.value, installedDeps, requestedSlug ?? currentSlug, projectRoot);
         } else {
           await orchestrate({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType }, onEvent);
