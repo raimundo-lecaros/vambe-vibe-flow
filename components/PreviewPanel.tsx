@@ -111,25 +111,23 @@ export default function PreviewPanel({
         onApplyFixes={onApplyFixes}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {showFiles && (
-          <div style={{ width: 220, flexShrink: 0, borderRight: `1px solid ${C.border}`, overflow: 'hidden' }}>
-            <FilesPanel files={generatedPage.files} />
+      {showFiles && (
+        <div style={{ height: 260, flexShrink: 0, borderBottom: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <FilesPanel slug={generatedPage.slug} />
+        </div>
+      )}
+
+      <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ backgroundColor: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
+        {viewMode === 'desktop' ? (
+          <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <div className="border-[6px] border-zinc-600 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white" style={{ width: '390px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }}>
+              <iframe ref={iframeRef} key={`${generatedPage.slug}-mobile`} src={generatedPage.previewUrl} style={{ width: '390px', height: '844px', display: 'block', border: 'none' }} title="Mobile preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
+            </div>
+            <p className="text-zinc-600 text-xs">390 × 844 px</p>
           </div>
         )}
-
-        <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ backgroundColor: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
-          {viewMode === 'desktop' ? (
-            <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <div className="border-[6px] border-zinc-600 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white" style={{ width: '390px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }}>
-                <iframe ref={iframeRef} key={`${generatedPage.slug}-mobile`} src={generatedPage.previewUrl} style={{ width: '390px', height: '844px', display: 'block', border: 'none' }} title="Mobile preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
-              </div>
-              <p className="text-zinc-600 text-xs">390 × 844 px</p>
-            </div>
-          )}
-        </div>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg) } }' }} />
