@@ -84,10 +84,34 @@ export function useGeneration() {
     }
   };
 
-  const handleApplyFixes = (issues: Issue[]) => {
+  const handleApplyFixes = async (issues: Issue[]) => {
     if (!generatedPage || isGenerating) return;
-    const prompt = ['Corregí los siguientes issues detectados por el consultor visual:', ...issues.map((i) => `- [${i.severity.toUpperCase()}] ${i.component} (${i.category}): ${i.description}\n  Fix: ${i.fixHint}`)].join('\n');
-    void handleSend(prompt);
+    const detail = [
+      'Corregí los siguientes issues detectados por el consultor visual:',
+      ...issues.map((i) => `- [${i.severity.toUpperCase()}] ${i.component} (${i.category}): ${i.description}\n  Fix: ${i.fixHint}`),
+    ].join('\n');
+    const label = `Aplicar ${issues.length} corrección${issues.length !== 1 ? 'es' : ''} del QA`;
+    setMessages((m) => [...m, { role: 'user', content: label }]);
+    setIsGenerating(true);
+    setGenStatus('Analizando correcciones…');
+    setGenChars(0);
+    resetAgents();
+    try {
+      const apiMessages = [...messages, { role: 'user' as const, content: detail }];
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType }),
+      });
+      await readSSEStream(res.body!.getReader(), setters);
+    } catch (err) {
+      setMessages((m) => [...m, { role: 'assistant', content: `Error inesperado: ${String(err)}` }]);
+    } finally {
+      setIsGenerating(false);
+      setGenStatus('');
+      setGenChars(0);
+      resetAgents();
+    }
   };
 
   const handleInstallDeps = async () => {
