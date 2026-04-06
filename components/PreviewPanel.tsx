@@ -52,7 +52,7 @@ export default function PreviewPanel({
 
   if (!generatedPage) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center" style={{ background: C.bg, backgroundImage: 'radial-gradient(circle, #2a2a34 1px, transparent 1px)', backgroundSize: '28px 28px' }}>
+      <div className="flex-1 flex flex-col items-center justify-center" style={{ backgroundColor: C.bg, backgroundImage: 'radial-gradient(circle, #2a2a34 1px, transparent 1px)', backgroundSize: '28px 28px' }}>
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: C.toolbar, border: `1px solid ${C.border}` }}>
             <Monitor size={22} style={{ color: C.text3 }} />
@@ -114,7 +114,7 @@ export default function PreviewPanel({
         onApplyFixes={onApplyFixes}
       />
 
-      <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ background: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
+      <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ backgroundColor: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
         {viewMode === 'desktop' ? (
           <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
         ) : (
