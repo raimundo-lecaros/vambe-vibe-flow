@@ -21,11 +21,19 @@ export function useQATest(
     setTestResult(null);
     setSelectedIssueIds(new Set());
     try {
-      const res = await fetch('/api/test-page', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: generatedPage.slug }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120_000);
+      let res: Response;
+      try {
+        res = await fetch('/api/test-page', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: generatedPage.slug }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       const json = (await res.json()) as TestResult & { error?: string };
 
       if (!res.ok || json.error) {
@@ -55,6 +63,8 @@ export function useQATest(
       );
       setSelectedIssueIds(autoSelected);
     } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const errMsg = isAbort ? 'Timeout de 2 minutos alcanzado' : String(err);
       console.error('Auto-test failed:', err);
       setTestResult({
         desktopScreenshot: '',
@@ -65,8 +75,8 @@ export function useQATest(
           component: 'Test Runner',
           category: 'error',
           severity: 'critical',
-          description: `Error de red al llamar al test runner: ${String(err)}`,
-          fixHint: 'Verificar que el servidor Next.js esté corriendo en localhost:3000',
+          description: `Error al llamar al test runner: ${errMsg}. Podés reintentar con el botón Test.`,
+          fixHint: 'Si el error persiste, verificar que el servidor Next.js esté corriendo en localhost:3000.',
         }],
         domMetrics: { hasHorizontalOverflow: false, consoleErrors: [], stuckAnimations: [], smallTapTargets: 0, smallTextElements: 0, brokenImages: 0, brokenIcons: [], overlaps: [] },
         passed: false,
@@ -96,7 +106,7 @@ export function useQATest(
     if (!generatedPage || generatedPage.slug === prevSlugRef.current) return;
     prevSlugRef.current = generatedPage.slug;
     setTestResult(null);
-    const timer = setTimeout(() => void handleAutoTest(), 3000);
+    const timer = setTimeout(() => void handleAutoTest(), 8000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generatedPage?.slug]);

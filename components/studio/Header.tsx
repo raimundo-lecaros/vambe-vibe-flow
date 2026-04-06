@@ -18,7 +18,7 @@ export default function Header({ onNewSession }: HeaderProps) {
         <span className="text-white text-xs font-bold">V</span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold leading-none" style={{ color: C.text1 }}>Vibe Studio</p>
+        <p className="text-[13px] font-semibold leading-none" style={{ color: C.text1 }}>Vambe VibeFlow</p>
       </div>
       <button
         onClick={onNewSession}

@@ -31,8 +31,15 @@ export interface OrchestrateParams {
   mediaType?: string;
 }
 
+export interface QAIssue {
+  component: string;
+  description: string;
+  fixHint: string;
+}
+
 export interface OrchestrateEditParams extends OrchestrateParams {
   existingFiles: { path: string; content: string }[];
   slug: string;
   fixMode?: boolean;
+  qaIssues?: QAIssue[];
 }

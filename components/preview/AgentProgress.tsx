@@ -76,7 +76,7 @@ export default function AgentProgress({ agents, agentStatuses, agentFiles, agent
           </svg>
 
           {planner && (
-            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 2 }}>
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, calc(-50% + 11px))', zIndex: 2 }}>
               <AgentCard agent={planner} status={agentStatuses[planner] ?? 'running'} size={72}
                 selected={expandedAgent === planner}
                 onToggle={() => setExpandedAgent(expandedAgent === planner ? null : planner)}
@@ -88,7 +88,7 @@ export default function AgentProgress({ agents, agentStatuses, agentFiles, agent
           {children.slice(0, visibleCount).map((agent, i) => {
             const pos = childPos(i, children.length, radius);
             return (
-              <div key={agent} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)', zIndex: 2 }}>
+              <div key={agent} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, calc(-50% + 11px))', zIndex: 2 }}>
                 <AgentCard agent={agent} status={agentStatuses[agent] ?? 'running'}
                   files={agentFiles[agent]} size={52}
                   selected={expandedAgent === agent}
