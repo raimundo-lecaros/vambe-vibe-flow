@@ -55,6 +55,14 @@ Generás UN SOLO componente React/Next.js de producción.
 ${DESIGN_SYSTEM}
 ${faqInstruction}
 
+CLEAN CODE — OBLIGATORIO:
+- Sin comentarios de ningún tipo (ni //, ni /* */, ni JSDoc)
+- Máx 150 líneas por archivo. Si el componente las supera, extraé sub-componentes
+  en la misma carpeta components/ (ej: ${componentName}Card.tsx, ${componentName}Header.tsx)
+  y devolvelos como archivos separados en el output
+- Sin imports sin usar, sin variables sin usar, sin console.log
+- Nombres descriptivos: ${componentName}Card no Card, ${componentName}Item no Item
+
 IMPORTANTE:
 - Importá los datos así: import { ${exportName} } from '../data/content'
 - NO reimportés Plus_Jakarta_Sans — la fuente ya viene del layout
@@ -93,6 +101,11 @@ export async function runDataAgent(
 Generás el archivo data/content.ts de una landing page.
 
 ${DESIGN_SYSTEM}
+
+CLEAN CODE — OBLIGATORIO:
+- Sin comentarios de ningún tipo (ni //, ni /* */)
+- Sin exports sin usar
+- Nombres de tipos descriptivos: HeroData no Hero, PricingPlanData no Plan
 
 COPY PARA GEO — CRÍTICO:
   Headings: formulados como preguntas directas que la gente busca en Google/ChatGPT
