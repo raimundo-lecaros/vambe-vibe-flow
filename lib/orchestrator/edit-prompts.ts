@@ -36,6 +36,12 @@ FORMATO OBLIGATORIO — devolvé el archivo entero:
 Modificás un archivo existente según el pedido. Devolvés el archivo COMPLETO.
 No cambiés lo que no necesita cambiar. Mantené imports, interfaces y estructura.
 
+CLEAN CODE — OBLIGATORIO:
+- Sin comentarios (ni //, ni /* */, ni JSDoc)
+- Máx 150 líneas. Si el archivo editado supera ese límite, extraé lógica a un archivo hermano
+- Sin imports sin usar, sin variables sin usar
+- Nombres descriptivos y auto-explicativos
+
 FORMATO:
 ===FILE: ${filePath}===
 ...código completo...

@@ -76,6 +76,14 @@ export const ICONS_SECTION = `ICONOS — REGLAS CRÍTICAS (violación = íconos 
 export const CODE_RULES_SECTION = `TONO:
   NUNCA uses emojis en el código ni en los textos de la landing — se ven poco profesionales
 
+CLEAN CODE — OBLIGATORIO:
+  Sin comentarios de ningún tipo — ni //, ni /* */, ni JSDoc. El código se entiende por naming.
+  Máx 150 líneas por archivo. Si el componente supera ese límite, extraé sub-componentes
+    en la misma carpeta components/ con nombres descriptivos (ej: PricingCard.tsx, HeroHeadline.tsx).
+  Sin imports sin usar. Sin variables sin usar. Sin console.log ni código de debug.
+  Nombres descriptivos y auto-explicativos: PricingCard no Card, HeroHeadline no Title.
+  Una responsabilidad por componente: si hacés dos cosas, son dos archivos.
+
 REGLAS DE CÓDIGO:
   page.tsx: Server Component, sin 'use client'
   Con useState/useEffect/motion: 'use client' al tope
