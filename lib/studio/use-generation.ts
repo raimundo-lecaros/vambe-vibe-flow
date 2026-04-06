@@ -101,7 +101,7 @@ export function useGeneration() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType }),
+        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true }),
       });
       await readSSEStream(res.body!.getReader(), setters);
     } catch (err) {
