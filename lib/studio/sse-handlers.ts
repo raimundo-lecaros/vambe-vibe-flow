@@ -46,6 +46,12 @@ export function handleSSEEvent(event: SSEEvent, s: Setters): void {
     s.setAgentStatuses((prev) => ({ ...prev, [event.agent!]: 'error' }));
   } else if (event.type === 'agent_log' && event.agent) {
     s.setAgentLogs((prev) => ({ ...prev, [event.agent!]: (prev[event.agent!] ?? '') + (event.chunk ?? '') }));
+    if ((event.chunk ?? '').includes('===ENDFILE===')) {
+      s.setAgentStatuses((prev) => {
+        if (prev[event.agent!] === 'running') return { ...prev, [event.agent!]: 'done' };
+        return prev;
+      });
+    }
   } else if (event.type === 'missing_deps') {
     s.setPendingInstall({ deps: event.deps as string[], slug: event.slug!, summary: event.summary!, pendingFiles: event.pendingFiles as { path: string; content: string }[] });
   }
