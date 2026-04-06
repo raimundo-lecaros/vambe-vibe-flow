@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "./(generated)";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,6 +12,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-vambe: #006AFF;
+  --color-vambe-dark: #0060E6;
 }
 
 @media (prefers-color-scheme: dark) {
