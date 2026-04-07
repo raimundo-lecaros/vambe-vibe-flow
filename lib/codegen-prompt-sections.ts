@@ -40,40 +40,37 @@ export const ANIMATIONS_SECTION = `ANIMACIONES — USA FRAMER MOTION (siempre di
     initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
   NUNCA uses animate-fade-in, animate-slide-up ni clases CDN para animaciones`;
 
-export const ICONS_SECTION = `ICONOS — REGLAS CRÍTICAS (violación = íconos rotos en producción):
+export const ICONS_SECTION = `ICONOS — REGLAS CRÍTICAS (violación = íconos se muestran como texto plano):
 
-  REGLA 1 — NUNCA guardes íconos como strings en data/content.ts
-    MAL:  { icon: 'clock', text: '...' }       ← el string "clock" se renderiza como texto
-    MAL:  { icon: 'Clock', text: '...' }       ← igual de malo
-    MAL:  iconKey: 'trending-up'               ← cualquier variante de esto está roto
+  REGLA ABSOLUTA: NUNCA renderices {item.iconKey} ni {item.icon} directamente en JSX.
+    MAL: <span>{item.iconKey}</span>  ← imprime el string "TrendingUp" como texto
+    MAL: {item.icon}                  ← igual de malo
+    BIEN: {ICON_MAP[item.iconKey] ?? <Zap size={20} />}
 
-  REGLA 2 — Los íconos van en el COMPONENTE, no en los datos
-    BIEN: en data/content.ts usá iconKey: string como identificador
-    BIEN: en el componente .tsx creá un mapa explícito:
+  PATRÓN OBLIGATORIO cuando la interface tiene iconKey: string:
+    1. En data/content.ts → el campo se llama iconKey: string con valores exactos de Lucide (ej: "TrendingUp")
+    2. En el componente .tsx → creá un ICON_MAP:
 
-      import { Clock, TrendingUp, Users, Shield, Zap, Check, ArrowRight } from 'lucide-react'
+      import { Clock, TrendingUp, Users, Shield, Zap, Check } from 'lucide-react'
 
       const ICON_MAP: Record<string, React.ReactNode> = {
-        clock:        <Clock size={20} />,
-        trending_up:  <TrendingUp size={20} />,
-        users:        <Users size={20} />,
-        shield:       <Shield size={20} />,
-        zap:          <Zap size={20} />,
+        TrendingUp:  <TrendingUp size={20} />,
+        Clock:       <Clock size={20} />,
+        Users:       <Users size={20} />,
+        Shield:      <Shield size={20} />,
+        Zap:         <Zap size={20} />,
+        Check:       <Check size={20} />,
       }
       // Render: {ICON_MAP[item.iconKey] ?? <Zap size={20} />}
 
-  REGLA 3 — Alternativa válida: SVG inline en el componente
-    Si preferís no usar lucide-react, definí los íconos como componentes SVG inline
-    directamente en el .tsx, NUNCA como strings.
-
-  REGLA 4 — Íconos disponibles en lucide-react (usar estos nombres exactos en imports):
-    Check, CheckCircle, X, AlertCircle, AlertTriangle, Info, Clock, Calendar,
-    User, Users, UserCheck, Shield, ShieldCheck, Lock, Key, Star, Heart, Bell,
-    Mail, MessageSquare, Phone, Search, Settings, Zap, ArrowRight, ArrowLeft,
-    ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Plus, Minus, Edit, Trash2,
-    Download, Upload, ExternalLink, Link, Globe, MapPin, Building2, Package, Layers,
+  Íconos disponibles en lucide-react (nombres exactos para ICON_MAP e import):
+    Check, CheckCircle, Clock, Calendar, User, Users, UserCheck, Shield, ShieldCheck,
+    Lock, Key, Star, Heart, Bell, Mail, MessageSquare, Phone, Search, Settings,
+    Zap, ArrowRight, ArrowLeft, ChevronRight, ChevronDown, Plus, Edit, Trash2,
+    Download, Upload, ExternalLink, Globe, MapPin, Building2, Package, Layers,
     BarChart2, TrendingUp, TrendingDown, Target, Award, RefreshCw, Eye, Code2,
-    Database, Server, Cpu, Wifi, Cloud, FileText, Folder, Image, Play, Bookmark`;
+    Database, Server, Cpu, Wifi, Cloud, FileText, Folder, Play, Bookmark, Brain,
+    Sparkles, DollarSign, FileCheck, RotateCcw, CreditCard, Headphones, Maximize2`;
 
 export const CODE_RULES_SECTION = `TONO:
   NUNCA uses emojis en el código ni en los textos de la landing — se ven poco profesionales

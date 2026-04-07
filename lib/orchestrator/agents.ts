@@ -68,6 +68,13 @@ CLEAN CODE — OBLIGATORIO:
 - Sin imports sin usar, sin variables sin usar, sin console.log
 - Nombres descriptivos y auto-explicativos
 
+ICONOS — VERIFICACIÓN OBLIGATORIA ANTES DE ESCRIBIR EL COMPONENTE:
+¿La interface tiene algún campo iconKey (o icon)?
+  SÍ → DEBES crear un ICON_MAP en el componente que lo usa. NUNCA hagas {item.iconKey} directo.
+  NO → no hay nada que hacer.
+El ICON_MAP mapea el string (ej: "TrendingUp") al componente Lucide real (ej: <TrendingUp size={20} />).
+Ver sección ICONOS arriba para la lista de nombres disponibles.
+
 IMPORTANTE — RUTAS DE IMPORT:
 - Si el componente está en components/${componentName}.tsx (sin subcarpeta):
     import { ${exportName} } from '../data/content'
