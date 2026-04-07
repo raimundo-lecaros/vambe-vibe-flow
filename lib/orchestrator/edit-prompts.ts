@@ -1,16 +1,16 @@
 export function buildCoordinatorSystem(fixMode: boolean): string {
   if (fixMode) {
     return `Eres un arquitecto frontend analizando reportes de bugs de QA visual.
-Identificás TODOS los archivos de componentes que necesitan correcciones.
+Determinás cuáles archivos de la lista deben modificarse para corregir los bugs reportados.
 Respondé SOLO con JSON: { "components": ["Hero", "Features"], "updateData": false }
-- Incluí TODOS los componentes mencionados explícitamente en los issues
-- Incluí también componentes que contengan los elementos CSS descritos (e.g., si el bug habla de h1 o botones, el componente que los contiene)
+- Usá EXACTAMENTE los nombres de archivo de la lista (sin la extensión .tsx)
+- Buscá en el código de cada bug qué texto, clase CSS o elemento menciona, y mapealo al archivo que lo contiene
 - updateData: true solo si los textos en data/content.ts necesitan cambios
 - Preferí incluir de más que de menos`;
   }
   return `Eres un arquitecto frontend. Determinás qué archivos de una landing page necesitan modificarse.
 Respondé SOLO con JSON: { "components": ["Hero"], "updateData": false }
-- components: nombres PascalCase de los componentes en la carpeta components/
+- Usá EXACTAMENTE los nombres de archivo de la lista (sin la extensión .tsx)
 - updateData: true si hay cambios en textos, labels o datos en data/content.ts`;
 }
 
@@ -35,6 +35,12 @@ FORMATO OBLIGATORIO — devolvé el archivo entero:
   return `Eres un senior frontend engineer de Vambe AI.
 Modificás un archivo existente según el pedido. Devolvés el archivo COMPLETO.
 No cambiés lo que no necesita cambiar. Mantené imports, interfaces y estructura.
+
+CLEAN CODE — OBLIGATORIO:
+- Sin comentarios (ni //, ni /* */, ni JSDoc)
+- Máx 150 líneas. Si el archivo editado supera ese límite, extraé lógica a un archivo hermano
+- Sin imports sin usar, sin variables sin usar
+- Nombres descriptivos y auto-explicativos
 
 FORMATO:
 ===FILE: ${filePath}===

@@ -34,11 +34,21 @@ async function runEditAgent(
   filePath: string,
   existingContent: string,
   params: OrchestrateEditParams,
+  agentName: string,
   onChunk: (text: string) => void
 ): Promise<GeneratedFile[]> {
   const isTs = filePath.endsWith('.ts');
   const temperature = params.fixMode ? 0 : params.temperature;
-  const userMsg = `${params.fixMode ? 'Bugs a corregir' : 'Pedido'}: ${params.userPrompt}\n\nArchivo actual (${filePath}):\n\`\`\`${isTs ? 'ts' : 'tsx'}\n${existingContent}\n\`\`\`\n\nAplicá los cambios. Devolvé SOLO el bloque ===FILE:===...===ENDFILE===.`;
+
+  let issueText = params.userPrompt;
+  if (params.fixMode && params.qaIssues && params.qaIssues.length > 0) {
+    const name = agentName.toLowerCase();
+    const relevant = params.qaIssues.filter((i) => i.component.toLowerCase() === name);
+    const toUse = relevant.length > 0 ? relevant : params.qaIssues;
+    issueText = 'Bugs a corregir:\n' + toUse.map((i) => `- [${i.component}]: ${i.description}\n  Fix: ${i.fixHint}`).join('\n');
+  }
+
+  const userMsg = `${params.fixMode ? issueText : `Pedido: ${params.userPrompt}`}\n\nArchivo actual (${filePath}):\n\`\`\`${isTs ? 'ts' : 'tsx'}\n${existingContent}\n\`\`\`\n\nAplicá los cambios. Devolvé SOLO el bloque ===FILE:===...===ENDFILE===.`;
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
@@ -102,7 +112,7 @@ export async function orchestrateEdit(
   const results = await Promise.allSettled(
     agentEntries.map(({ name, path }) => {
       const existing = params.existingFiles.find((f) => f.path === path);
-      return runEditAgent(path, existing?.content ?? '', params, (chunk) =>
+      return runEditAgent(path, existing?.content ?? '', params, name, (chunk) =>
         onEvent({ type: 'agent_log', agent: name, chunk })
       );
     })

@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { fileToBase64, resizeForAPI, getMediaType } from '@/lib/image-utils';
 import type { Issue } from '@/lib/visual-tester';
-import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType } from './types';
+import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, Session } from './types';
 import type { SelectedElement } from '@/components/preview/types';
 import { readSSEStream } from './sse-handlers';
 
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
 export function useGeneration() {
+  const [sessionId, setSessionId] = useState<string>(newId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -28,7 +31,8 @@ export function useGeneration() {
     try {
       const raw = localStorage.getItem('vibe-studio');
       if (!raw) return;
-      const saved = JSON.parse(raw) as { messages?: Message[]; generatedPage?: GeneratedPage | null; pageHistory?: GeneratedPage[] };
+      const saved = JSON.parse(raw) as { messages?: Message[]; generatedPage?: GeneratedPage | null; pageHistory?: GeneratedPage[]; sessionId?: string };
+      if (saved.sessionId) setSessionId(saved.sessionId);
       if (saved.messages) setMessages(saved.messages);
       if (saved.generatedPage) setGeneratedPage(saved.generatedPage);
       if (saved.pageHistory) setPageHistory(saved.pageHistory);
@@ -36,8 +40,8 @@ export function useGeneration() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('vibe-studio', JSON.stringify({ messages, generatedPage, pageHistory })); } catch { /* quota */ }
-  }, [messages, generatedPage, pageHistory]);
+    try { localStorage.setItem('vibe-studio', JSON.stringify({ sessionId, messages, generatedPage, pageHistory })); } catch { /* quota */ }
+  }, [sessionId, messages, generatedPage, pageHistory]);
 
   const handleUndo = () => {
     if (pageHistory.length <= 1) { setPageHistory([]); setGeneratedPage(null); }
@@ -98,10 +102,11 @@ export function useGeneration() {
     resetAgents();
     try {
       const apiMessages = [...messages, { role: 'user' as const, content: detail }];
+      const qaIssues = issues.map((i) => ({ component: i.component, description: i.description, fixHint: i.fixHint }));
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true }),
+        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true, qaIssues }),
       });
       await readSSEStream(res.body!.getReader(), setters);
     } catch (err) {
@@ -134,7 +139,22 @@ export function useGeneration() {
     } finally { setPendingInstall(null); setIsGenerating(false); setGenStatus(''); }
   };
 
-  void genChars; // suppress unused
+  void genChars;
+
+  const loadSession = (session: Session) => {
+    setSessionId(session.id);
+    setMessages(session.messages);
+    setGeneratedPage(session.generatedPage);
+    setPageHistory(session.pageHistory);
+  };
+
+  const resetSession = () => {
+    setSessionId(newId());
+    setMessages([]);
+    setInput('');
+    setGeneratedPage(null);
+    setPageHistory([]);
+  };
 
   return {
     messages, setMessages, input, setInput, isGenerating, genStatus,
@@ -143,5 +163,6 @@ export function useGeneration() {
     imageFile, setImageFile, selectedElement, setSelectedElement,
     creativityMode, setCreativityMode, pageType, setPageType,
     handleSend, handleUndo, handleApplyFixes, handleInstallDeps,
+    loadSession, resetSession, sessionId,
   };
 }

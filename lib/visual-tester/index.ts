@@ -62,16 +62,16 @@ export async function testPage(
       });
     }
 
-    for (const o of domMetrics.overlaps) {
+    domMetrics.overlaps.forEach((o, i) => {
       domIssues.push({
-        id: `dom-overlap-${ts}-${o.elementA}`,
+        id: `dom-overlap-${ts}-${i}`,
         component: 'Layout',
         category: 'layout',
         severity: 'warning',
-        description: `Superposición de ${o.overlapArea}px² entre "${o.elementA}" y "${o.elementB}". Playwright detectó intersección real de píxeles entre estos elementos.`,
-        fixHint: 'Revisar z-index, position (relative/absolute/fixed) y padding de los elementos superpuestos. Si uno es sticky o fixed, verificar que no tape contenido scrollable.',
+        description: `Superposición de ${o.overlapArea}px² entre "${o.elementA}" y "${o.elementB}". Playwright midió intersección real de píxeles.`,
+        fixHint: `Encontrá el elemento "${o.elementA}" en el código (buscá por el texto o la clase). Agregá position:relative y ajustá z-index, margin o padding para que no se superpongan con "${o.elementB}". Si uno es absolute/fixed, verificar que no tape elementos interactivos.`,
       });
-    }
+    });
 
     if (domMetrics.hasHorizontalOverflow) {
       domIssues.push({

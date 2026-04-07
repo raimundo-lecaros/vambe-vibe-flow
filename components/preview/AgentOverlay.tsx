@@ -1,86 +1,74 @@
 'use client';
 
-import React from 'react';
-import { CheckCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import AgentCard from './AgentCard';
 import { C } from './constants';
 
-interface AgentOverlayProps {
+interface Props {
   agents: string[];
   agentStatuses: Record<string, 'running' | 'done' | 'error'>;
   genStatus: string;
 }
 
-const STATUS_COLOR = {
-  done:    '#4ade80',
-  error:   '#f87171',
-  running: '#93bbff',
-};
+const STEP_MS = 950;
 
-export default function AgentOverlay({ agents, agentStatuses, genStatus }: AgentOverlayProps) {
+export default function AgentOverlay({ agents, agentStatuses, genStatus }: Props) {
+  const [visibleCount, setVisibleCount] = useState(0);
   const doneCount = Object.values(agentStatuses).filter((s) => s === 'done').length;
   const totalCount = agents.length;
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  const planner = agents.find((a) => a === 'Planner');
+  const children = agents.filter((a) => a !== 'Planner');
 
-  const rootAgents = agents.filter((a) => a === 'Planner');
-  const childAgents = agents.filter((a) => a !== 'Planner');
+  useEffect(() => { setVisibleCount(0); }, [planner]);
+  useEffect(() => {
+    if (visibleCount >= children.length) return;
+    const t = setTimeout(() => setVisibleCount((v) => v + 1), visibleCount === 0 ? 600 : STEP_MS);
+    return () => clearTimeout(t);
+  }, [visibleCount, children.length]);
 
-  const renderAgent = (agent: string) => {
-    const status = agentStatuses[agent];
-    return (
-      <div key={agent} className="flex items-center gap-2">
-        <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-          {status === 'done'    && <CheckCircle size={11} className="text-green-400" />}
-          {status === 'error'   && <X size={11} className="text-red-400" />}
-          {status === 'running' && (
-            <span
-              className="w-2.5 h-2.5 rounded-full border-[1.5px] border-blue-500 border-t-transparent inline-block"
-              style={{ animation: 'spin 0.8s linear infinite' }}
-            />
-          )}
-          {!status && <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: C.text3 }} />}
-        </div>
-        <span className="text-[11px] truncate" style={{ color: status ? STATUS_COLOR[status] : C.text3 }}>
-          {agent}
-        </span>
-      </div>
-    );
-  };
+  const nodeEnter = (delay = 0) => ({
+    initial: { opacity: 0, scale: 0.5 },
+    animate: { opacity: 1, scale: 1 },
+    transition: { delay, type: 'spring' as const, stiffness: 320, damping: 22 },
+  });
 
   return (
-    <div
-      className="absolute bottom-5 right-5 z-10 rounded-xl shadow-2xl overflow-hidden"
-      style={{ background: C.toolbar, border: `1px solid ${C.border}`, minWidth: '200px', maxWidth: '260px' }}
-    >
-      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-medium" style={{ color: C.text1 }}>Aplicando cambios</span>
-          <span className="text-[11px] font-mono tabular-nums" style={{ color: C.text3 }}>
-            {doneCount}/{totalCount}
-          </span>
+    <div className="absolute bottom-5 right-5 z-10 rounded-2xl shadow-2xl overflow-hidden" style={{ background: C.toolbar, border: `1px solid ${C.border}`, maxWidth: 340 }}>
+      <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-medium" style={{ color: C.text1 }}>Aplicando cambios</span>
+          <span className="text-[10px] font-mono tabular-nums" style={{ color: C.text3 }}>{doneCount}/{totalCount}</span>
         </div>
-        <div className="h-1 rounded-full overflow-hidden" style={{ background: C.input }}>
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
+        <div style={{ height: 3, borderRadius: 999, overflow: 'hidden', background: C.input }}>
+          <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#3b82f6,#818cf8)', borderRadius: 999, transition: 'width 0.5s' }} />
         </div>
       </div>
 
-      <div className="px-4 py-3">
-        <div className="space-y-1.5">
-          {rootAgents.map(renderAgent)}
+      <div className="px-4 py-4 flex flex-col items-center gap-3">
+        {planner && (
+          <AgentCard agent={planner} status={agentStatuses[planner] ?? 'running'} compact motionProps={nodeEnter(0)} />
+        )}
+
+        {children.length > 0 && planner && (
+          <div style={{ width: 1, height: 12, background: 'linear-gradient(#38bdf8,#818cf8)' }} />
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, maxWidth: 300 }}>
+          {children.slice(0, visibleCount).map((agent) => (
+            <AgentCard key={agent} agent={agent} status={agentStatuses[agent] ?? 'running'} compact motionProps={nodeEnter(0.3)} />
+          ))}
         </div>
-        {childAgents.length > 0 && (
-          <div className="ml-2 pl-3 border-l mt-1.5 space-y-1.5" style={{ borderColor: C.border }}>
-            {childAgents.map(renderAgent)}
-          </div>
-        )}
-        {genStatus && (
-          <p className="text-[10px] pt-2 font-mono truncate" style={{ color: C.text3 }}>{genStatus}</p>
-        )}
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg) } }' }} />
+      {genStatus && (
+        <div className="px-4 pb-3">
+          <p className="text-[9px] font-mono truncate" style={{ color: C.text3 }}>{genStatus}</p>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin{to{transform:rotate(360deg)}}' }} />
     </div>
   );
 }

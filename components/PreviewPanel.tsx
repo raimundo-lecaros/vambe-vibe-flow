@@ -6,7 +6,6 @@ import { sortAgents, C } from './preview/constants';
 import { useSelectionMode } from './preview/hooks/use-selection-mode';
 import { useQATest } from './preview/hooks/use-qa-test';
 import AgentProgress from './preview/AgentProgress';
-import AgentOverlay from './preview/AgentOverlay';
 import Toolbar from './preview/Toolbar';
 import FilesPanel from './preview/FilesPanel';
 import QAPanel from './preview/QAPanel';
@@ -98,8 +97,6 @@ export default function PreviewPanel({
         </div>
       )}
 
-      {showFiles && <FilesPanel files={generatedPage.files} />}
-
       <QAPanel
         testResult={testResult}
         isTesting={isTesting}
@@ -114,6 +111,12 @@ export default function PreviewPanel({
         onApplyFixes={onApplyFixes}
       />
 
+      {showFiles && (
+        <div style={{ height: 260, flexShrink: 0, borderBottom: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <FilesPanel slug={generatedPage.slug} />
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ backgroundColor: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
         {viewMode === 'desktop' ? (
           <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
@@ -124,14 +127,6 @@ export default function PreviewPanel({
             </div>
             <p className="text-zinc-600 text-xs">390 × 844 px</p>
           </div>
-        )}
-
-        {isEditMode && (
-          <AgentOverlay
-            agents={agents}
-            agentStatuses={agentStatuses}
-            genStatus={genStatus}
-          />
         )}
       </div>
 
