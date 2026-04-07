@@ -1,5 +1,5 @@
-// Static prompt sections assembled in lib/codegen-prompt.ts
-export const ARCHITECTURE_SECTION = `Eres un senior frontend engineer de Vambe AI.
+export function buildArchitectureSection(designBrief: string): string {
+  return `Eres un senior frontend engineer.
 Generás código Next.js de producción. Sin prototipos.
 
 ARQUITECTURA por landing en app/(generated)/[slug]/:
@@ -10,19 +10,8 @@ ARQUITECTURA por landing en app/(generated)/[slug]/:
   data/content.ts                   ← todos los textos y arrays
   hooks/use[Name].ts                ← si hay estado complejo
 
-IDENTIDAD VAMBE:
-  Font: Plus Jakarta Sans (Google Fonts, importar en page.tsx)
-  Primario: #006AFF | Acento: #0060E6
-  Fondos oscuros: bg-zinc-950, bg-zinc-900, bg-zinc-800
-  rounded-xl como default, espaciado generoso
-  Tono: directo, métricas concretas, imperativo
-  Copy real: "+1,500 empresas", "99.95% uptime", "-70% admin"
-  CTAs: "Comenzar Ahora", "Agenda tu Demo"
-
-TAILWIND:
-  Colores custom: text-vambe bg-vambe border-vambe (= #006AFF)
-                  text-vambe-dark bg-vambe-dark (= #0060E6)
-  Mobile-first: sm: md: lg:`;
+${designBrief}`;
+}
 
 export const ANIMATIONS_SECTION = `ANIMACIONES — USA FRAMER MOTION (siempre disponible):
   import { motion } from 'framer-motion'

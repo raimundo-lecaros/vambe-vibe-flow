@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { fileToBase64, resizeForAPI, getMediaType } from '@/lib/image-utils';
 import type { Issue } from '@/lib/visual-tester';
-import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, Session } from './types';
+import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, BrandMode, Session } from './types';
 import type { SelectedElement } from '@/components/preview/types';
 import { readSSEStream } from './sse-handlers';
 
@@ -26,6 +26,7 @@ export function useGeneration() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [creativityMode, setCreativityMode] = useState<CreativityMode>('modern');
   const [pageType, setPageType] = useState<PageType>('saas');
+  const [brandMode, setBrandMode] = useState<BrandMode>('vambe');
 
   useEffect(() => {
     try {
@@ -74,7 +75,7 @@ export function useGeneration() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, currentSlug: generatedPage?.slug, creativityMode, pageType, imageBase64, mediaType, selectedElement }),
+        body: JSON.stringify({ messages: newMessages, currentSlug: generatedPage?.slug, creativityMode, brandMode, pageType, imageBase64, mediaType, selectedElement }),
       });
       setSelectedElement(null);
       await readSSEStream(res.body!.getReader(), setters);
@@ -161,7 +162,7 @@ export function useGeneration() {
     generatedPage, pageHistory, pendingInstall, setPendingInstall,
     agentStatuses, agentFiles, agentLogs,
     imageFile, setImageFile, selectedElement, setSelectedElement,
-    creativityMode, setCreativityMode, pageType, setPageType,
+    creativityMode, setCreativityMode, pageType, setPageType, brandMode, setBrandMode,
     handleSend, handleUndo, handleApplyFixes, handleInstallDeps,
     loadSession, resetSession, sessionId,
   };
