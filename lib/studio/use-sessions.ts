@@ -15,22 +15,23 @@ export function useSessions() {
     } catch { /* corrupted */ }
   }, []);
 
-  function persist(next: Session[]) {
-    setSessions(next);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota */ }
-  }
-
   function saveSession(session: Session) {
     setSessions((prev) => {
+      const existing = prev.find((s) => s.id === session.id);
+      const merged = existing ? { ...session, createdAt: existing.createdAt } : session;
       const filtered = prev.filter((s) => s.id !== session.id);
-      const next = [session, ...filtered].slice(0, 30);
+      const next = [merged, ...filtered].slice(0, 30);
       try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota */ }
       return next;
     });
   }
 
   function deleteSession(id: string) {
-    persist(sessions.filter((s) => s.id !== id));
+    setSessions((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota */ }
+      return next;
+    });
   }
 
   return { sessions, saveSession, deleteSession };
