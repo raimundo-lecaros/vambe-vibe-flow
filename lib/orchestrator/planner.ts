@@ -32,7 +32,7 @@ Dado un brief, planificás la estructura completa de la landing:
 Reglas:
 - slug: URL-safe, solo minúsculas y guiones
 - components: PascalCase, máximo 7, ordenados por posición. SIEMPRE incluí "FAQ" — es obligatorio para SEO/GEO
-- interfaces: TypeScript válido, una interface por sección
+- interfaces: TypeScript válido, una interface por sección. CRÍTICO: los campos de ícono SIEMPRE se llaman `iconKey: string` (nunca `icon: string` — eso causa renderizado como texto plano)
 - deps: SOLO paquetes no disponibles en: ${params.installedDeps.join(', ')}
 - metaTitle: incluye keyword principal, max 60 chars, termina en "| [Marca]"
 - metaDescription: responde "¿qué hace X para Y?", max 155 chars, incluye métrica concreta si aplica
