@@ -1,5 +1,5 @@
 import {
-  ARCHITECTURE_SECTION,
+  buildArchitectureSection,
   ANIMATIONS_SECTION,
   ICONS_SECTION,
   CODE_RULES_SECTION,
@@ -8,11 +8,13 @@ import {
 } from './codegen-prompt-sections';
 
 interface PromptParams {
+  designBrief?: string;
   installedDeps?: string[];
   existingFiles?: { path: string; content: string }[];
 }
 
 export function buildCodegenSystemPrompt({
+  designBrief = '',
   installedDeps = [],
   existingFiles = [],
 }: PromptParams = {}): string {
@@ -25,7 +27,7 @@ export function buildCodegenSystemPrompt({
     : '';
 
   return [
-    ARCHITECTURE_SECTION,
+    buildArchitectureSection(designBrief),
     ANIMATIONS_SECTION,
     ICONS_SECTION,
     CODE_RULES_SECTION,

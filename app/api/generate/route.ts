@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { orchestrate, orchestrateEdit, type OrchestratorEvent } from '@/lib/orchestrator';
+import { readDesignBrief, type BrandMode } from '@/lib/designer';
 import { writeAndFinish, type ParsedResponse } from './write-files';
 
 const CREATIVITY_PREFIXES: Record<string, string> = {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
           slug?: string;
           currentSlug?: string;
           creativityMode?: string;
+          brandMode?: BrandMode;
           pageType?: string;
           imageBase64?: string;
           mediaType?: string;
@@ -81,10 +83,11 @@ export async function POST(request: NextRequest) {
           qaIssues?: { component: string; description: string; fixHint: string }[];
         };
 
-        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
+        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', brandMode = 'vambe', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
         const projectRoot = process.cwd();
         const prefix = fixMode ? '' : (CREATIVITY_PREFIXES[creativityMode] ?? '');
-        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' ? 0.8 : 0.3);
+        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' || brandMode === 'libre' ? 0.9 : 0.3);
+        const designBrief = await readDesignBrief(brandMode);
 
         let installedDeps: string[] = [];
         try {
@@ -109,10 +112,10 @@ export async function POST(request: NextRequest) {
         if (currentSlug) {
           const slugDir = path.join(projectRoot, 'app/(generated)', currentSlug);
           const existingFiles = await readExistingFiles(slugDir, currentSlug);
-          await orchestrateEdit({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType, existingFiles, slug: currentSlug, fixMode, qaIssues }, onEvent);
+          await orchestrateEdit({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, designBrief, imageBase64, mediaType, existingFiles, slug: currentSlug, fixMode, qaIssues }, onEvent);
           if (resultRef.value) await writeAndFinish(send, resultRef.value, installedDeps, requestedSlug ?? currentSlug, projectRoot);
         } else {
-          await orchestrate({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, imageBase64, mediaType }, onEvent);
+          await orchestrate({ userPrompt: fullPrompt, installedDeps, creativityPrefix: prefix, temperature, designBrief, imageBase64, mediaType }, onEvent);
           if (resultRef.value) await writeAndFinish(send, resultRef.value, installedDeps, requestedSlug, projectRoot);
         }
       } catch (error) {

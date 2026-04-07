@@ -88,7 +88,7 @@ export default function StudioPage() {
           />
         )}
 
-        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} />
+        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} brandMode={gen.brandMode} setBrandMode={gen.setBrandMode} />
 
         <MessageList messages={gen.messages} isGenerating={gen.isGenerating} genStatus={gen.genStatus} agentStatuses={gen.agentStatuses} onExampleClick={(p) => void gen.handleSend(p)} />
 

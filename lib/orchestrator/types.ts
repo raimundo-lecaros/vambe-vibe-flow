@@ -27,6 +27,7 @@ export interface OrchestrateParams {
   installedDeps: string[];
   creativityPrefix: string;
   temperature: number;
+  designBrief: string;
   imageBase64?: string;
   mediaType?: string;
 }
