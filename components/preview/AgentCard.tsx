@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, X, Brain, Cpu, Star, Zap, Menu, AlignJustify, MousePointer, MessageSquare, Tag, HelpCircle, Layers, Code2 } from 'lucide-react';
+import { CheckCircle, X, Brain, Cpu, Star, Zap, Menu, AlignJustify, MousePointer, MessageSquare, Tag, HelpCircle, Layers, Code2, ShieldCheck, Wrench } from 'lucide-react';
 
 const AGENT_META: Record<string, { icon: React.ElementType; accent: string }> = {
   Planner:      { icon: Brain,         accent: '#818cf8' },
@@ -16,6 +16,8 @@ const AGENT_META: Record<string, { icon: React.ElementType; accent: string }> = 
   Pricing:      { icon: Tag,           accent: '#84cc16' },
   FAQ:          { icon: HelpCircle,    accent: '#e879f9' },
   Datos:        { icon: Code2,         accent: '#94a3b8' },
+  Verificador:  { icon: ShieldCheck,   accent: '#34d399' },
+  AutoFix:      { icon: Wrench,        accent: '#fb923c' },
 };
 
 const DEF = { icon: Cpu, accent: '#94a3b8' };

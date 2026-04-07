@@ -9,7 +9,7 @@ import {
   Bug,
 } from 'lucide-react';
 
-export const AGENT_ORDER = ['Planner', 'Datos'];
+export const AGENT_ORDER = ['Planner', 'Datos', 'Verificador', 'AutoFix'];
 
 export function sortAgents(agents: string[]): string[] {
   return [...agents].sort((a, b) => {
