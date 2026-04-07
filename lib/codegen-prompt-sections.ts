@@ -79,11 +79,16 @@ CLEAN CODE — OBLIGATORIO:
 REGLAS DE CÓDIGO:
   page.tsx: Server Component, sin 'use client'
   Con useState/useEffect/motion: 'use client' al tope
-  TypeScript strict, interfaces desde data/content.ts
+  TypeScript strict, interfaces INLINE en data/content.ts (nunca en un types.ts separado)
   next/image con width/height explícitos
   NUNCA uses 'style jsx' ni styled-jsx — rompe Server Components
   NUNCA uses Math.random() ni Date.now() en el estado inicial — causa hydration mismatch
-  Props de arrays: siempre inicializá con fallback: const items = data?.items ?? []`;
+  Props de arrays: siempre inicializá con fallback: const items = data?.items ?? []
+
+IMPORTS — UN SOLO IMPORT POR PATH:
+  MAL:  import type { HeroData } from './data/content'
+        import { HERO_DATA } from './data/content'
+  BIEN: import { type HeroData, HERO_DATA } from './data/content'`;
 
 export const SEO_GEO_SECTION = `SEO Y METADATA — OBLIGATORIO en page.tsx:
   import type { Metadata } from 'next'
