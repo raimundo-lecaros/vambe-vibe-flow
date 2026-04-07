@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PreviewPanel from '@/components/PreviewPanel';
 import Header from '@/components/studio/Header';
 import Controls from '@/components/studio/Controls';
@@ -41,28 +41,29 @@ export default function StudioPage() {
     document.addEventListener('mouseup', handleMouseUp);
   }, [sidebarWidth]);
 
+  const buildSession = (): Session => ({
+    id: gen.sessionId,
+    summary: (gen.messages.find((m) => m.role === 'user')?.content ?? 'Sin título').slice(0, 120),
+    createdAt: Date.now(),
+    generatedPage: gen.generatedPage,
+    messages: gen.messages,
+    pageHistory: gen.pageHistory,
+  });
+
+  useEffect(() => {
+    if (!gen.generatedPage || gen.isGenerating) return;
+    saveSession(buildSession());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gen.generatedPage, gen.sessionId]);
+
   const handleNewSession = () => {
-    if (gen.generatedPage) {
-      const summary = gen.messages.find((m) => m.role === 'user')?.content ?? 'Sin título';
-      const session: Session = {
-        id: gen.generatedPage.slug,
-        summary: summary.slice(0, 120),
-        createdAt: Date.now(),
-        generatedPage: gen.generatedPage,
-        messages: gen.messages,
-        pageHistory: gen.pageHistory,
-      };
-      saveSession(session);
-    }
+    if (gen.generatedPage) saveSession(buildSession());
     gen.resetSession();
     setShowSessions(false);
   };
 
   const handleLoadSession = (session: Session) => {
-    if (gen.generatedPage) {
-      const summary = gen.messages.find((m) => m.role === 'user')?.content ?? 'Sin título';
-      saveSession({ id: gen.generatedPage.slug, summary: summary.slice(0, 120), createdAt: Date.now(), generatedPage: gen.generatedPage, messages: gen.messages, pageHistory: gen.pageHistory });
-    }
+    if (gen.generatedPage) saveSession(buildSession());
     gen.loadSession(session);
     setShowSessions(false);
   };

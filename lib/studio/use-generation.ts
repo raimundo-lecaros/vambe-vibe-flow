@@ -7,7 +7,10 @@ import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, 
 import type { SelectedElement } from '@/components/preview/types';
 import { readSSEStream } from './sse-handlers';
 
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
 export function useGeneration() {
+  const [sessionId, setSessionId] = useState<string>(newId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -28,7 +31,8 @@ export function useGeneration() {
     try {
       const raw = localStorage.getItem('vibe-studio');
       if (!raw) return;
-      const saved = JSON.parse(raw) as { messages?: Message[]; generatedPage?: GeneratedPage | null; pageHistory?: GeneratedPage[] };
+      const saved = JSON.parse(raw) as { messages?: Message[]; generatedPage?: GeneratedPage | null; pageHistory?: GeneratedPage[]; sessionId?: string };
+      if (saved.sessionId) setSessionId(saved.sessionId);
       if (saved.messages) setMessages(saved.messages);
       if (saved.generatedPage) setGeneratedPage(saved.generatedPage);
       if (saved.pageHistory) setPageHistory(saved.pageHistory);
@@ -36,8 +40,8 @@ export function useGeneration() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('vibe-studio', JSON.stringify({ messages, generatedPage, pageHistory })); } catch { /* quota */ }
-  }, [messages, generatedPage, pageHistory]);
+    try { localStorage.setItem('vibe-studio', JSON.stringify({ sessionId, messages, generatedPage, pageHistory })); } catch { /* quota */ }
+  }, [sessionId, messages, generatedPage, pageHistory]);
 
   const handleUndo = () => {
     if (pageHistory.length <= 1) { setPageHistory([]); setGeneratedPage(null); }
@@ -138,17 +142,18 @@ export function useGeneration() {
   void genChars;
 
   const loadSession = (session: Session) => {
+    setSessionId(session.id);
     setMessages(session.messages);
     setGeneratedPage(session.generatedPage);
     setPageHistory(session.pageHistory);
   };
 
   const resetSession = () => {
+    setSessionId(newId());
     setMessages([]);
     setInput('');
     setGeneratedPage(null);
     setPageHistory([]);
-    try { localStorage.removeItem('vibe-studio'); } catch { /* */ }
   };
 
   return {
@@ -158,6 +163,6 @@ export function useGeneration() {
     imageFile, setImageFile, selectedElement, setSelectedElement,
     creativityMode, setCreativityMode, pageType, setPageType,
     handleSend, handleUndo, handleApplyFixes, handleInstallDeps,
-    loadSession, resetSession,
+    loadSession, resetSession, sessionId,
   };
 }
