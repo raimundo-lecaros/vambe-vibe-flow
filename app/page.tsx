@@ -15,7 +15,7 @@ import type { Session } from '@/lib/studio/types';
 
 export default function StudioPage() {
   const gen = useGeneration();
-  const { sessions, saveSession, deleteSession } = useSessions();
+  const { sessions, saveSession, deleteSession, renameSession } = useSessions();
   const [showSessions, setShowSessions] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -83,6 +83,7 @@ export default function StudioPage() {
             sessions={sessions}
             onLoad={handleLoadSession}
             onDelete={deleteSession}
+            onRename={renameSession}
             onClose={() => setShowSessions(false)}
           />
         )}

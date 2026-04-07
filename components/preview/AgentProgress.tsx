@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import AgentCard from './AgentCard';
+import { C } from './constants';
 
 const STEP_MS = 700;
 const CX = 50;
@@ -45,8 +46,8 @@ export default function AgentProgress({ agents, agentStatuses, agentFiles, agent
   }, [visibleCount, children.length]);
 
   return (
-    <div className="flex-1 flex flex-col bg-zinc-950 overflow-hidden">
-      <div className="px-6 pt-6 pb-4 shrink-0">
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#0d0d12', backgroundImage: 'radial-gradient(circle, #2a2a34 1px, transparent 1px)', backgroundSize: '28px 28px', backdropFilter: 'blur(2px)' }}>
+      <div className="px-6 pt-6 pb-4 shrink-0" style={{ background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(8px)' }}>
         <div className="flex items-center gap-3 mb-3">
           <div className="flex-1">
             <p className="text-[13px] font-medium text-white mb-0.5">Generando página</p>

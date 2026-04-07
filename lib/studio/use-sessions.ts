@@ -34,5 +34,13 @@ export function useSessions() {
     });
   }
 
-  return { sessions, saveSession, deleteSession };
+  function renameSession(id: string, name: string) {
+    setSessions((prev) => {
+      const next = prev.map((s) => s.id === id ? { ...s, summary: name } : s);
+      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota */ }
+      return next;
+    });
+  }
+
+  return { sessions, saveSession, deleteSession, renameSession };
 }
