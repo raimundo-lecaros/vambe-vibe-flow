@@ -14,7 +14,11 @@ export function parseFilesFromText(text: string): GeneratedFile[] {
 }
 
 export function toExportName(componentName: string): string {
-  return `${componentName.toUpperCase()}_DATA`;
+  const snake = componentName
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+    .toUpperCase();
+  return `${snake}_DATA`;
 }
 
 export function buildJsonLd(plan: Plan): Record<string, unknown> {
@@ -46,7 +50,6 @@ export function buildPageFile(plan: Plan): GeneratedFile {
   const tags = plan.components.map((c) => `      <${c} />`).join('\n');
   const jsonLd = buildJsonLd(plan);
 
-  // Escape for safe embedding inside template literal
   const metaTitle = plan.metaTitle.replace(/'/g, "\\'");
   const metaDesc = plan.metaDescription.replace(/'/g, "\\'");
 
