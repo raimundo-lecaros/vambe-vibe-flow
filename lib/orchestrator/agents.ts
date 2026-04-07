@@ -99,9 +99,15 @@ Generá el componente "${componentName}" para esta landing.
 Interfaces disponibles (de data/content.ts):
 ${plan.interfaces}
 
-ATENCIÓN con los imports:
-- Archivo simple (components/${componentName}.tsx): import { ${exportName} } from '../data/content'
-- Con subcarpeta (components/${componentName}/index.tsx): import { ${exportName} } from '../../data/content'
+IMPORTS — REGLAS:
+- UN SOLO import por path. Nunca dos líneas para el mismo módulo.
+  MAL:  import type { FooData } from '../../data/content'
+        import { FOO_DATA } from '../../data/content'
+  BIEN: import { type FooData, FOO_DATA } from '../../data/content'
+- Ruta según ubicación:
+  components/${componentName}.tsx       → '../data/content'
+  components/${componentName}/index.tsx → '../../data/content'
+  components/${componentName}/Card.tsx  → '../../data/content'
 Solo el bloque ===FILE:===...===ENDFILE===.`;
 
   return streamAgent(system, userMsg, params.temperature, onChunk);
@@ -121,8 +127,16 @@ Generás el archivo data/content.ts de una landing page.
 
 ${buildDesignSystem(params.designBrief)}
 
-CLEAN CODE — OBLIGATORIO:
-- Sin comentarios de ningún tipo (ni //, ni /* */)
+ESTRUCTURA DEL ARCHIVO — CRÍTICO:
+- Todo va en UN SOLO archivo: data/content.ts
+- Las interfaces van PRIMERO, inline en el mismo archivo. NUNCA importes desde "./types" ni crees archivos separados.
+- Un archivo data/types.ts separado rompe la build — no existe en el disco.
+- Estructura obligatoria:
+    export interface HeroData { ... }
+    export interface FeatureItem { ... }
+    export const HERO_DATA: HeroData = { ... }
+    export const FEATURES_DATA: FeatureItem[] = [ ... ]
+- Sin comentarios (ni //, ni /* */)
 - Sin exports sin usar
 - Nombres de tipos descriptivos: HeroData no Hero, PricingPlanData no Plan
 
