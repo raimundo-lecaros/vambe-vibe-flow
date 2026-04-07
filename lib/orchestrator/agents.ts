@@ -68,8 +68,13 @@ CLEAN CODE — OBLIGATORIO:
 - Sin imports sin usar, sin variables sin usar, sin console.log
 - Nombres descriptivos y auto-explicativos
 
-IMPORTANTE:
-- Importá los datos así: import { ${exportName} } from '../data/content'
+IMPORTANTE — RUTAS DE IMPORT:
+- Si el componente está en components/${componentName}.tsx (sin subcarpeta):
+    import { ${exportName} } from '../data/content'
+- Si el componente está en components/${componentName}/index.tsx (con subcarpeta):
+    import { ${exportName} } from '../../data/content'
+- Los sub-componentes en components/${componentName}/Card.tsx también usan:
+    import { ... } from '../../data/content'
 - NO reimportés Plus_Jakarta_Sans — la fuente ya viene del layout
 - Usá exactamente las interfaces del plan
 - Generá el componente completo sin truncar
@@ -87,7 +92,9 @@ Generá el componente "${componentName}" para esta landing.
 Interfaces disponibles (de data/content.ts):
 ${plan.interfaces}
 
-Importá { ${exportName} } desde '../data/content'.
+ATENCIÓN con los imports:
+- Archivo simple (components/${componentName}.tsx): import { ${exportName} } from '../data/content'
+- Con subcarpeta (components/${componentName}/index.tsx): import { ${exportName} } from '../../data/content'
 Solo el bloque ===FILE:===...===ENDFILE===.`;
 
   return streamAgent(system, userMsg, params.temperature, onChunk);
