@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { verifyAndFix } from '@/lib/orchestrator/verify';
 
 export interface GeneratedFile {
   path: string;
@@ -49,6 +50,8 @@ export async function writeAndFinish(
     writtenFiles.push({ path: file.path, lines: file.content.split('\n').length });
     send({ type: 'status', message: `Escribió ${file.path}` });
   }
+
+  await verifyAndFix(slug, projectRoot, send);
 
   send({
     type: 'done',
