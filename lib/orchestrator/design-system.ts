@@ -23,6 +23,40 @@ REGLAS DE CÓDIGO:
   NUNCA Math.random() ni Date.now() en estado inicial — hydration mismatch
   Arrays desde props o data: siempre con fallback — const items = data?.items ?? []
 
+ICONOS — REGLAS CRÍTICAS (violación = íconos rotos, se muestran como texto plano):
+
+REGLA ABSOLUTA: NUNCA renderices {item.iconKey} ni {item.icon} directamente en JSX.
+  MAL: <span>{item.iconKey}</span>   ← imprime el string "TrendingUp" como texto
+  MAL: {item.icon}                   ← igual de malo
+  BIEN: {ICON_MAP[item.iconKey] ?? <Zap size={20} />}  ← renderiza el componente real
+
+Cuando una interface tiene iconKey: string, el componente SIEMPRE debe:
+  1. Importar los iconos de lucide-react
+  2. Crear un objeto ICON_MAP: Record<string, React.ReactNode>
+  3. Renderizar con ICON_MAP[item.iconKey] ?? <Zap size={20} />
+
+Ejemplo obligatorio:
+  import { Clock, TrendingUp, Users, Shield, Zap, Check } from 'lucide-react'
+  const ICON_MAP: Record<string, React.ReactNode> = {
+    Clock:       <Clock size={20} />,
+    TrendingUp:  <TrendingUp size={20} />,
+    Users:       <Users size={20} />,
+    Shield:      <Shield size={20} />,
+    Zap:         <Zap size={20} />,
+    Check:       <Check size={20} />,
+  }
+  // Render: {ICON_MAP[item.iconKey] ?? <Zap size={20} />}
+
+Íconos disponibles en lucide-react (nombres exactos para el ICON_MAP):
+  Check, CheckCircle, Clock, Calendar, User, Users, UserCheck, Shield, ShieldCheck,
+  Lock, Key, Star, Heart, Bell, Mail, MessageSquare, Phone, Search, Settings,
+  Zap, ArrowRight, ArrowLeft, ChevronRight, ChevronDown, Plus, Edit, Trash2,
+  Download, Upload, ExternalLink, Globe, MapPin, Building2, Package, Layers,
+  BarChart2, TrendingUp, TrendingDown, Target, Award, RefreshCw, Eye, Code2,
+  Database, Server, Cpu, Wifi, Cloud, FileText, Folder, Play, Bookmark, Brain,
+  Sparkles, Workflow, DollarSign, FileCheck, RotateCcw, CreditCard, Headphones,
+  Maximize2, Pen, BarChart3
+
 ANIMACIONES — USA FRAMER MOTION (siempre disponible):
   import { motion } from 'framer-motion'
   El componente DEBE tener 'use client'
