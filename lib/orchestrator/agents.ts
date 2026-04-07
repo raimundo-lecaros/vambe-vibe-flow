@@ -1,5 +1,5 @@
 import { client, parseFilesFromText, toExportName } from './helpers';
-import { DESIGN_SYSTEM } from './design-system';
+import { buildDesignSystem } from './design-system';
 import type { Plan, GeneratedFile, OrchestrateParams } from './types';
 
 async function streamAgent(
@@ -52,7 +52,7 @@ export async function runComponentAgent(
   const system = `Eres un senior frontend engineer de Vambe AI.
 Generás UN SOLO componente React/Next.js de producción.
 
-${DESIGN_SYSTEM}
+${buildDesignSystem(params.designBrief)}
 ${faqInstruction}
 
 CLEAN CODE — OBLIGATORIO:
@@ -119,7 +119,7 @@ export async function runDataAgent(
   const system = `Eres un copywriter técnico especializado en SEO y GEO (Generative Engine Optimization).
 Generás el archivo data/content.ts de una landing page.
 
-${DESIGN_SYSTEM}
+${buildDesignSystem(params.designBrief)}
 
 CLEAN CODE — OBLIGATORIO:
 - Sin comentarios de ningún tipo (ni //, ni /* */)

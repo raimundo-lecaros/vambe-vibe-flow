@@ -17,6 +17,10 @@ export async function runPlanner(params: OrchestrateParams): Promise<Plan> {
   const system = `Eres un arquitecto de landing pages especialista en SEO y GEO (Generative Engine Optimization).
 Respondés SOLO con JSON válido, sin markdown ni texto extra.
 
+Contexto de diseño para esta sesión:
+${params.designBrief}
+
+
 Dado un brief, planificás la estructura completa de la landing:
 {
   "slug": "url-slug-en-minusculas-con-guiones",
