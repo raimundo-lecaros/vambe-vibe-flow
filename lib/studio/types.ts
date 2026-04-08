@@ -14,7 +14,7 @@ export interface PendingInstall {
 
 export type CreativityMode = 'disruptive' | 'modern' | 'corporate';
 export type PageType = 'saas' | 'producto' | 'agencia' | 'ecommerce' | 'startup' | 'portfolio';
-export type BrandMode = 'vambe' | 'libre';
+export type BrandMode = 'vambe' | 'libre' | (string & {});
 
 export interface Session {
   id: string;

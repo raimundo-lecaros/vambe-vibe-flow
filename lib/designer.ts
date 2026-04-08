@@ -10,13 +10,19 @@ const FALLBACK_LIBRE = `DISEÑO LIBRE — sin restricciones de marca.
   Elegí paleta, tipografía y layout propios. Inspirate en Stripe, Linear, Vercel, Arc.
   Sé inesperado. Sin emojis. Calidad de clase mundial.`;
 
-export type BrandMode = 'vambe' | 'libre';
+export type BrandMode = 'vambe' | 'libre' | (string & {});
 
-export async function readDesignBrief(mode: BrandMode): Promise<string> {
-  const file = mode === 'libre' ? 'DESIGNER_LIBRE.md' : 'DESIGNER.md';
-  try {
-    return await fs.readFile(path.join(process.cwd(), file), 'utf-8');
-  } catch {
-    return mode === 'libre' ? FALLBACK_LIBRE : FALLBACK_VAMBE;
+export async function readDesignBrief(mode: string): Promise<string> {
+  if (mode === 'libre') {
+    try { return await fs.readFile(path.join(process.cwd(), 'DESIGNER_LIBRE.md'), 'utf-8'); }
+    catch { return FALLBACK_LIBRE; }
   }
+  if (mode !== 'vambe') {
+    try {
+      const raw = await fs.readFile(path.join(process.cwd(), 'brands', `${mode}.json`), 'utf-8');
+      return (JSON.parse(raw) as { brief: string }).brief;
+    } catch { /* fallthrough to vambe */ }
+  }
+  try { return await fs.readFile(path.join(process.cwd(), 'DESIGNER.md'), 'utf-8'); }
+  catch { return FALLBACK_VAMBE; }
 }

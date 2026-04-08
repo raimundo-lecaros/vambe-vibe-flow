@@ -8,6 +8,7 @@ import MessageList from '@/components/studio/MessageList';
 import InputBar from '@/components/studio/InputBar';
 import DepsModal from '@/components/studio/DepsModal';
 import SessionsPanel from '@/components/studio/SessionsPanel';
+import BrandModal from '@/components/studio/BrandModal';
 import { useGeneration } from '@/lib/studio/use-generation';
 import { useSessions } from '@/lib/studio/use-sessions';
 import { C } from '@/lib/studio/constants';
@@ -17,6 +18,8 @@ export default function StudioPage() {
   const gen = useGeneration();
   const { sessions, saveSession, deleteSession, renameSession } = useSessions();
   const [showSessions, setShowSessions] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [brandRefreshTrigger, setBrandRefreshTrigger] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
 
@@ -88,7 +91,7 @@ export default function StudioPage() {
           />
         )}
 
-        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} brandMode={gen.brandMode} setBrandMode={gen.setBrandMode} />
+        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} brandMode={gen.brandMode} setBrandMode={gen.setBrandMode} onImportBrand={() => setShowBrandModal(true)} brandRefreshTrigger={brandRefreshTrigger} />
 
         <MessageList messages={gen.messages} isGenerating={gen.isGenerating} genStatus={gen.genStatus} agentStatuses={gen.agentStatuses} onExampleClick={(p) => void gen.handleSend(p)} />
 
@@ -103,6 +106,13 @@ export default function StudioPage() {
 
         <InputBar input={gen.input} setInput={gen.setInput} isGenerating={gen.isGenerating} selectedElement={gen.selectedElement} setSelectedElement={gen.setSelectedElement} imageFile={gen.imageFile} setImageFile={gen.setImageFile} onSend={() => void gen.handleSend()} />
       </div>
+
+      {showBrandModal && (
+        <BrandModal
+          onSave={(id) => { gen.setBrandMode(id); setBrandRefreshTrigger((n) => n + 1); setShowBrandModal(false); }}
+          onClose={() => setShowBrandModal(false)}
+        />
+      )}
 
       <div onMouseDown={handleDividerMouseDown} className="w-1 shrink-0 cursor-col-resize transition-colors hover:bg-blue-500" style={{ background: '#2a2a34' }} />
 
