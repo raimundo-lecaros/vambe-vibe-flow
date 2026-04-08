@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { fileToBase64, resizeForAPI, getMediaType } from '@/lib/image-utils';
 import type { Issue } from '@/lib/visual-tester';
-import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, BrandMode, Session } from './types';
+import type { Message, PendingInstall, GeneratedPage, CreativityMode, PageType, Session } from './types';
 import type { SelectedElement } from '@/components/preview/types';
 import { readSSEStream } from './sse-handlers';
+import { applyFixes } from './apply-fixes';
 
 function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
@@ -26,7 +27,9 @@ export function useGeneration() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [creativityMode, setCreativityMode] = useState<CreativityMode>('modern');
   const [pageType, setPageType] = useState<PageType>('saas');
-  const [brandMode, setBrandMode] = useState<BrandMode>('vambe');
+  const [identityMode, setIdentityMode] = useState('vambe');
+  const [aestheticMode, setAestheticMode] = useState('vambe');
+  const [toneMode, setToneMode] = useState('directo');
 
   useEffect(() => {
     try {
@@ -75,7 +78,7 @@ export function useGeneration() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, currentSlug: generatedPage?.slug, creativityMode, brandMode, pageType, imageBase64, mediaType, selectedElement }),
+        body: JSON.stringify({ messages: newMessages, currentSlug: generatedPage?.slug, creativityMode, identityMode, aestheticMode, toneMode, pageType, imageBase64, mediaType, selectedElement }),
       });
       setSelectedElement(null);
       await readSSEStream(res.body!.getReader(), setters);
@@ -91,33 +94,7 @@ export function useGeneration() {
 
   const handleApplyFixes = async (issues: Issue[]) => {
     if (!generatedPage || isGenerating) return;
-    const detail = [
-      'Corregí los siguientes issues detectados por el consultor visual:',
-      ...issues.map((i) => `- [${i.severity.toUpperCase()}] ${i.component} (${i.category}): ${i.description}\n  Fix: ${i.fixHint}`),
-    ].join('\n');
-    const label = `Aplicar ${issues.length} corrección${issues.length !== 1 ? 'es' : ''} del QA`;
-    setMessages((m) => [...m, { role: 'user', content: label }]);
-    setIsGenerating(true);
-    setGenStatus('Analizando correcciones…');
-    setGenChars(0);
-    resetAgents();
-    try {
-      const apiMessages = [...messages, { role: 'user' as const, content: detail }];
-      const qaIssues = issues.map((i) => ({ component: i.component, description: i.description, fixHint: i.fixHint }));
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, currentSlug: generatedPage.slug, creativityMode, pageType, fixMode: true, qaIssues }),
-      });
-      await readSSEStream(res.body!.getReader(), setters);
-    } catch (err) {
-      setMessages((m) => [...m, { role: 'assistant', content: `Error inesperado: ${String(err)}` }]);
-    } finally {
-      setIsGenerating(false);
-      setGenStatus('');
-      setGenChars(0);
-      resetAgents();
-    }
+    await applyFixes(issues, { generatedPage, messages, creativityMode, pageType, setters, setMessages, setIsGenerating, setGenStatus, setGenChars, resetAgents });
   };
 
   const handleInstallDeps = async () => {
@@ -140,8 +117,6 @@ export function useGeneration() {
     } finally { setPendingInstall(null); setIsGenerating(false); setGenStatus(''); }
   };
 
-  void genChars;
-
   const loadSession = (session: Session) => {
     setSessionId(session.id);
     setMessages(session.messages);
@@ -162,7 +137,8 @@ export function useGeneration() {
     generatedPage, pageHistory, pendingInstall, setPendingInstall,
     agentStatuses, agentFiles, agentLogs,
     imageFile, setImageFile, selectedElement, setSelectedElement,
-    creativityMode, setCreativityMode, pageType, setPageType, brandMode, setBrandMode,
+    creativityMode, setCreativityMode, pageType, setPageType,
+    identityMode, setIdentityMode, aestheticMode, setAestheticMode, toneMode, setToneMode,
     handleSend, handleUndo, handleApplyFixes, handleInstallDeps,
     loadSession, resetSession, sessionId,
   };

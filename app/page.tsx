@@ -13,12 +13,14 @@ import { useGeneration } from '@/lib/studio/use-generation';
 import { useSessions } from '@/lib/studio/use-sessions';
 import { C } from '@/lib/studio/constants';
 import type { Session } from '@/lib/studio/types';
+import type { SelectorType } from '@/lib/brands';
 
 export default function StudioPage() {
   const gen = useGeneration();
   const { sessions, saveSession, deleteSession, renameSession } = useSessions();
   const [showSessions, setShowSessions] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
+  const [importingFor, setImportingFor] = useState<SelectorType | null>(null);
   const [brandRefreshTrigger, setBrandRefreshTrigger] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -91,7 +93,7 @@ export default function StudioPage() {
           />
         )}
 
-        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} brandMode={gen.brandMode} setBrandMode={gen.setBrandMode} onImportBrand={() => setShowBrandModal(true)} brandRefreshTrigger={brandRefreshTrigger} />
+        <Controls creativityMode={gen.creativityMode} setCreativityMode={gen.setCreativityMode} pageType={gen.pageType} setPageType={gen.setPageType} identityMode={gen.identityMode} setIdentityMode={gen.setIdentityMode} aestheticMode={gen.aestheticMode} setAestheticMode={gen.setAestheticMode} toneMode={gen.toneMode} setToneMode={gen.setToneMode} onImportBrand={(type) => { setImportingFor(type); setShowBrandModal(true); }} brandRefreshTrigger={brandRefreshTrigger} />
 
         <MessageList messages={gen.messages} isGenerating={gen.isGenerating} genStatus={gen.genStatus} agentStatuses={gen.agentStatuses} onExampleClick={(p) => void gen.handleSend(p)} />
 
@@ -109,7 +111,13 @@ export default function StudioPage() {
 
       {showBrandModal && (
         <BrandModal
-          onSave={(id) => { gen.setBrandMode(id); setBrandRefreshTrigger((n) => n + 1); setShowBrandModal(false); }}
+          onSave={(id) => {
+            if (importingFor === 'identity') gen.setIdentityMode(id);
+            else if (importingFor === 'aesthetic') gen.setAestheticMode(id);
+            else if (importingFor === 'tone') gen.setToneMode(id);
+            setBrandRefreshTrigger((n) => n + 1);
+            setShowBrandModal(false);
+          }}
           onClose={() => setShowBrandModal(false)}
         />
       )}

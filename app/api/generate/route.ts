@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { orchestrate, orchestrateEdit, type OrchestratorEvent } from '@/lib/orchestrator';
-import { readDesignBrief, type BrandMode } from '@/lib/designer';
+import { readCombinedBrief } from '@/lib/designer';
 import { writeAndFinish, type ParsedResponse } from './write-files';
 
 const CREATIVITY_PREFIXES: Record<string, string> = {
@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
           slug?: string;
           currentSlug?: string;
           creativityMode?: string;
-          brandMode?: BrandMode;
+          identityMode?: string;
+          aestheticMode?: string;
+          toneMode?: string;
           pageType?: string;
           imageBase64?: string;
           mediaType?: string;
@@ -83,11 +85,11 @@ export async function POST(request: NextRequest) {
           qaIssues?: { component: string; description: string; fixHint: string }[];
         };
 
-        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', brandMode = 'vambe', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
+        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', identityMode = 'vambe', aestheticMode = 'vambe', toneMode = 'directo', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
         const projectRoot = process.cwd();
         const prefix = fixMode ? '' : (CREATIVITY_PREFIXES[creativityMode] ?? '');
-        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' || brandMode === 'libre' ? 0.9 : 0.3);
-        const designBrief = await readDesignBrief(brandMode);
+        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' || aestheticMode === 'libre' ? 0.9 : 0.3);
+        const designBrief = await readCombinedBrief(identityMode, aestheticMode, toneMode);
 
         let installedDeps: string[] = [];
         try {
