@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       }));
       const msg = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
+        max_tokens: 4096,
         messages: [{ role: 'user', content: [...imageBlocks, { type: 'text' as const, text: VISUAL_PROMPT }] }],
       });
       text = (msg.content[0] as { type: string; text: string }).text;
