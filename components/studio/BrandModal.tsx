@@ -62,7 +62,6 @@ export default function BrandModal({ onSave, onClose }: Props) {
   }
 
   const canExtract = mode === 'url' ? url.trim().length > 0 : fileName.length > 0;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.72)' }}>
       <div className="relative rounded-xl p-5 w-[460px] space-y-4" style={{ background: C.sidebar, border: `1px solid ${C.border}` }}>
@@ -87,14 +86,17 @@ export default function BrandModal({ onSave, onClose }: Props) {
                 className="w-full text-[12px] rounded-lg px-3 py-2 outline-none"
                 style={{ background: C.input, border: `1px solid ${C.border}`, color: C.text1 }} />
             ) : (
-              <div onClick={() => fileRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-2 rounded-lg py-6 cursor-pointer"
-                style={{ border: `1px dashed ${C.border}`, color: C.text3 }}>
-                <Upload size={18} />
-                <span className="text-[11px]">{fileName || 'Haz click para subir .html'}</span>
-                <input ref={fileRef} type="file" accept=".html" className="hidden"
-                  onChange={(e) => { if (e.target.files?.[0]) setFileName(e.target.files[0].name); }} />
-              </div>
+              <>
+                <div onClick={() => fileRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 rounded-lg py-6 cursor-pointer"
+                  style={{ border: `1px dashed ${C.border}`, color: C.text3 }}>
+                  <Upload size={18} />
+                  <span className="text-[11px]">{fileName || 'Haz click para subir .html'}</span>
+                  <input ref={fileRef} type="file" accept=".html" className="hidden"
+                    onChange={(e) => { if (e.target.files?.[0]) setFileName(e.target.files[0].name); }} />
+                </div>
+                <p className="text-[10px] leading-relaxed px-1" style={{ color: C.text3 }}>⚠️ Solo funciona bien con páginas autocontenidas o mockups estáticos. Apps React/Next.js exportadas tienen HTML muy limitado — preferí la opción URL.</p>
+              </>
             )}
 
             {error && <p className="text-[11px]" style={{ color: '#f87171' }}>{error}</p>}
@@ -110,7 +112,7 @@ export default function BrandModal({ onSave, onClose }: Props) {
         {step === 'loading' && (
           <div className="flex flex-col items-center justify-center py-10 gap-3">
             <Loader2 size={22} className="animate-spin" style={{ color: C.accent }} />
-            <p className="text-[12px]" style={{ color: C.text3 }}>Analizando la marca…</p>
+            <p className="text-[12px]" style={{ color: C.text3 }}>{mode === 'url' ? 'Cargando la página y tomando capturas…' : 'Analizando la marca…'}</p>
           </div>
         )}
 
