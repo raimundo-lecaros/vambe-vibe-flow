@@ -29,7 +29,7 @@ export default function PreviewPanel({
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   const { selectionMode, setSelectionMode, iframeRef, injectSelectionMode } = useSelectionMode(onElementSelect);
-  const { testResult, isTesting, screenshotMode, setScreenshotMode, selectedIssueIds, setSelectedIssueIds, handleAutoTest, toggleIssue, handleApplySelected } = useQATest(generatedPage, isGenerating, onApplyFixes);
+  const { testResult, isTesting, showPanel, setShowPanel, screenshotMode, setScreenshotMode, selectedIssueIds, setSelectedIssueIds, handleAutoTest, toggleIssue, handleApplySelected } = useQATest(generatedPage, isGenerating, onApplyFixes);
 
   const agents = sortAgents(Object.keys(agentStatuses));
   const isOrchestratedGeneration = agents.length > 0;
@@ -57,7 +57,7 @@ export default function PreviewPanel({
             <Monitor size={22} style={{ color: C.text3 }} />
           </div>
           <p className="text-[15px] font-medium" style={{ color: C.text2 }}>Tu preview aparecerá aquí</p>
-          <p className="text-[12px] mt-1" style={{ color: C.text3 }}>Describí tu landing en el panel izquierdo</p>
+          <p className="text-[12px] mt-1" style={{ color: C.text3 }}>Describe tu landing en el panel izquierdo</p>
         </div>
       </div>
     );
@@ -80,10 +80,9 @@ export default function PreviewPanel({
         setSelectionMode={setSelectionMode}
         showFiles={showFiles}
         setShowFiles={setShowFiles}
-        testResult={testResult}
         isTesting={isTesting}
-        issueCount={issueCount}
-        handleAutoTest={handleAutoTest}
+        showPanel={showPanel}
+        onTogglePanel={() => setShowPanel((v) => !v)}
         onUndo={onUndo}
       />
 
@@ -97,20 +96,6 @@ export default function PreviewPanel({
         </div>
       )}
 
-      <QAPanel
-        testResult={testResult}
-        isTesting={isTesting}
-        issueCount={issueCount}
-        screenshotMode={screenshotMode}
-        setScreenshotMode={setScreenshotMode}
-        selectedIssueIds={selectedIssueIds}
-        setSelectedIssueIds={setSelectedIssueIds}
-        toggleIssue={toggleIssue}
-        handleApplySelected={handleApplySelected}
-        isGenerating={isGenerating}
-        onApplyFixes={onApplyFixes}
-      />
-
       {showFiles && (
         <div style={{ height: 260, flexShrink: 0, borderBottom: `1px solid ${C.border}`, overflow: 'hidden' }}>
           <FilesPanel slug={generatedPage.slug} />
@@ -118,6 +103,21 @@ export default function PreviewPanel({
       )}
 
       <div className="flex-1 relative overflow-auto flex items-start justify-center p-4" style={{ backgroundColor: C.bg, backgroundImage: `radial-gradient(circle, ${C.border} 1px, transparent 1px)`, backgroundSize: '28px 28px' }}>
+        <QAPanel
+          show={showPanel}
+          onClose={() => setShowPanel(false)}
+          onRunTest={handleAutoTest}
+          testResult={testResult}
+          isTesting={isTesting}
+          issueCount={issueCount}
+          screenshotMode={screenshotMode}
+          setScreenshotMode={setScreenshotMode}
+          selectedIssueIds={selectedIssueIds}
+          setSelectedIssueIds={setSelectedIssueIds}
+          toggleIssue={toggleIssue}
+          handleApplySelected={handleApplySelected}
+          isGenerating={isGenerating}
+        />
         {viewMode === 'desktop' ? (
           <iframe ref={iframeRef} key={`${generatedPage.slug}-desktop`} src={generatedPage.previewUrl} className="w-full rounded-lg border border-zinc-700 bg-white" style={{ height: 'calc(100vh - 120px)', minHeight: '600px', opacity: isEditMode ? 0.5 : 1, transition: 'opacity 0.3s' }} title="Desktop preview" onLoad={() => { if (selectionMode) injectSelectionMode(); }} />
         ) : (

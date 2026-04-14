@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-
-export interface BrandProfile {
-  id: string;
-  name: string;
-  createdAt: number;
-  brief: string;
-}
+import type { BrandProfile, BrandSummary } from '@/lib/brands';
 
 const BRANDS_DIR = path.join(process.cwd(), 'brands');
 
@@ -15,16 +9,23 @@ export async function GET() {
   try {
     await fs.mkdir(BRANDS_DIR, { recursive: true });
     const files = await fs.readdir(BRANDS_DIR);
-    const profiles: BrandProfile[] = [];
+    const summaries: BrandSummary[] = [];
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       try {
-        const raw = await fs.readFile(path.join(BRANDS_DIR, file), 'utf-8');
-        profiles.push(JSON.parse(raw) as BrandProfile);
-      } catch { /* skip corrupt */ }
+        const p = JSON.parse(await fs.readFile(path.join(BRANDS_DIR, file), 'utf-8')) as BrandProfile;
+        summaries.push({
+          id: p.id,
+          name: p.name,
+          createdAt: p.createdAt,
+          hasAesthetic: Boolean(p.aesthetic),
+          hasTone: Boolean(p.tone),
+          hasIdentity: Boolean(p.identity),
+        });
+      } catch { /* skip */ }
     }
-    profiles.sort((a, b) => b.createdAt - a.createdAt);
-    return NextResponse.json(profiles);
+    summaries.sort((a, b) => b.createdAt - a.createdAt);
+    return NextResponse.json(summaries);
   } catch {
     return NextResponse.json([]);
   }

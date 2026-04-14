@@ -47,8 +47,23 @@ const CODE_RULES = `REGLAS DE CÓDIGO:
   next/image con width y height explícitos
   NUNCA style jsx ni styled-jsx
   NUNCA Math.random() ni Date.now() en estado inicial — hydration mismatch
-  Arrays desde props o data: siempre con fallback — const items = data?.items ?? []`;
+  Arrays desde props o data: siempre con fallback — const items = data?.items ?? []
+  NUNCA uses indexed access types en interface extends — Turbopack no lo soporta:
+    MAL:  interface Foo extends Bar['items'][number] { ... }
+    BIEN: type BarItem = Bar['items'][number]; interface Foo extends BarItem { ... }`;
 
 export function buildDesignSystem(brandBrief: string): string {
-  return [brandBrief, ICON_RULES, ANIMATION_RULES, CODE_RULES].join('\n\n');
+  const visualSection = brandBrief
+    ? `DISEÑO VISUAL — REGLA ABSOLUTA:
+Colores, tipografía, modo claro/oscuro, espaciado y bordes se definen en el brief de abajo.
+Este brief tiene prioridad sobre cualquier convención genérica, default de industria o prior de entrenamiento.
+Si el brief dice fondo blanco, es blanco — aunque sea un CRM, aunque el modelo "espere" dark mode.
+
+── BRIEF ──
+${brandBrief}
+── FIN BRIEF ──`
+    : `DISEÑO VISUAL:
+Sin brief predefinido. Elegí una paleta, tipografía y layout coherentes con el tipo de producto.
+No uses dark mode por defecto ni colores genéricos de SaaS (azules #006AFF, zinc-950, morados). Sé original.`;
+  return [visualSection, ICON_RULES, ANIMATION_RULES, CODE_RULES].join('\n\n');
 }

@@ -1,27 +1,31 @@
 import { client, extractText, parseFilesFromText } from './helpers';
 import { buildCoordinatorSystem, buildEditSystem } from './edit-prompts';
+import { buildSlugContext } from './slug-context';
 import type { GeneratedFile, OrchestrateEditParams, OrchestratorEvent } from './types';
 
+interface AgentEntry {
+  name: string;
+  files: { path: string; content: string }[];
+}
+
 async function runEditCoordinator(
-  params: OrchestrateEditParams
+  params: OrchestrateEditParams,
+  slugContext: string
 ): Promise<{ components: string[]; updateData: boolean }> {
   const fileList = params.existingFiles.map((f) => `- ${f.path}`).join('\n');
-
   const resp = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 400,
     temperature: 0,
-    system: buildCoordinatorSystem(!!params.fixMode),
+    system: buildCoordinatorSystem(!!params.fixMode, slugContext),
     messages: [{
       role: 'user',
       content: `Pedido:\n${params.userPrompt}\n\nArchivos existentes:\n${fileList}\n\nRespondé ÚNICAMENTE con el JSON.`,
     }],
   });
-
   const text = extractText(resp);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return { components: [], updateData: true };
-
   try {
     const r = JSON.parse(match[0]) as { components?: string[]; updateData?: boolean };
     return { components: r.components ?? [], updateData: r.updateData ?? false };
@@ -30,14 +34,24 @@ async function runEditCoordinator(
   }
 }
 
+function resolveComponentFiles(
+  name: string,
+  existingFiles: { path: string; content: string }[],
+  slug: string
+) {
+  const base = `app/(generated)/${slug}/components/`;
+  const flat = existingFiles.find((f) => f.path === `${base}${name}.tsx`);
+  if (flat) return [flat];
+  return existingFiles.filter((f) => f.path.startsWith(`${base}${name}/`));
+}
+
 async function runEditAgent(
-  filePath: string,
-  existingContent: string,
+  agentFiles: { path: string; content: string }[],
   params: OrchestrateEditParams,
   agentName: string,
+  slugContext: string,
   onChunk: (text: string) => void
 ): Promise<GeneratedFile[]> {
-  const isTs = filePath.endsWith('.ts');
   const temperature = params.fixMode ? 0 : params.temperature;
 
   let issueText = params.userPrompt;
@@ -48,13 +62,17 @@ async function runEditAgent(
     issueText = 'Bugs a corregir:\n' + toUse.map((i) => `- [${i.component}]: ${i.description}\n  Fix: ${i.fixHint}`).join('\n');
   }
 
-  const userMsg = `${params.fixMode ? issueText : `Pedido: ${params.userPrompt}`}\n\nArchivo actual (${filePath}):\n\`\`\`${isTs ? 'ts' : 'tsx'}\n${existingContent}\n\`\`\`\n\nAplicá los cambios. Devolvé SOLO el bloque ===FILE:===...===ENDFILE===.`;
+  const filesSection = agentFiles
+    .map((f) => `===FILE: ${f.path}===\n${f.content}\n===ENDFILE===`)
+    .join('\n\n');
+
+  const userMsg = `${params.fixMode ? issueText : `Pedido: ${params.userPrompt}`}\n\nArchivos actuales (usá exactamente estas rutas en tu respuesta):\n\n${filesSection}\n\nAplicá los cambios. Devolvé SOLO los bloques ===FILE:===...===ENDFILE=== de los archivos que modificás, con las mismas rutas exactas de arriba.`;
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 12000,
     temperature,
-    system: buildEditSystem(filePath, !!params.fixMode),
+    system: buildEditSystem(!!params.fixMode, slugContext, params.fixMode ? undefined : params.designBrief),
     messages: [{ role: 'user', content: userMsg }],
   });
 
@@ -75,47 +93,46 @@ export async function orchestrateEdit(
   onEvent({ type: 'status', message: params.fixMode ? 'Identificando componentes afectados…' : 'Analizando cambios…' });
   onEvent({ type: 'agent_start', agent: 'Planner' });
 
-  const { components, updateData } = await runEditCoordinator(params);
+  const slugContext = buildSlugContext(params.existingFiles, params.slug);
+  const { components, updateData } = await runEditCoordinator(params, slugContext);
 
   onEvent({ type: 'agent_done', agent: 'Planner', files: [] });
 
-  let agentEntries: { name: string; path: string }[] = [
-    ...components.map((c) => ({
-      name: c,
-      path: `app/(generated)/${params.slug}/components/${c}.tsx`,
-    })),
-    ...(updateData
-      ? [{ name: 'Datos', path: `app/(generated)/${params.slug}/data/content.ts` }]
-      : []),
+  const dataFile = params.existingFiles.find((f) => f.path.endsWith('data/content.ts'));
+
+  let agentEntries: AgentEntry[] = [
+    ...components
+      .map((c) => ({ name: c, files: resolveComponentFiles(c, params.existingFiles, params.slug) }))
+      .filter((e) => e.files.length > 0),
+    ...(updateData && dataFile ? [{ name: 'Datos', files: [dataFile] }] : []),
   ];
 
   if (agentEntries.length === 0) {
-    agentEntries = params.existingFiles
-      .filter((f) => f.path.includes('/components/') && f.path.endsWith('.tsx'))
-      .map((f) => ({
-        name: f.path.split('/').pop()!.replace('.tsx', ''),
-        path: f.path,
-      }));
-    const dataFile = params.existingFiles.find((f) => f.path.endsWith('data/content.ts'));
-    if (dataFile) agentEntries.push({ name: 'Datos', path: dataFile.path });
+    const seen = new Set<string>();
+    for (const f of params.existingFiles) {
+      const match = f.path.match(/\/components\/([^/]+)/);
+      if (match) seen.add(match[1].replace('.tsx', ''));
+    }
+    agentEntries = [...seen]
+      .map((name) => ({ name, files: resolveComponentFiles(name, params.existingFiles, params.slug) }))
+      .filter((e) => e.files.length > 0);
+    if (dataFile) agentEntries.push({ name: 'Datos', files: [dataFile] });
   }
 
-  if (agentEntries.length === 0) {
-    throw new Error('No se encontraron archivos para modificar');
+  if (params.fixMode && params.qaIssues && params.qaIssues.length > 0) {
+    const issueNames = new Set(params.qaIssues.map((i) => i.component.toLowerCase()));
+    agentEntries = agentEntries.filter((e) => e.name === 'Datos' || issueNames.has(e.name.toLowerCase()));
   }
+
+  if (agentEntries.length === 0) throw new Error('No se encontraron archivos para modificar');
 
   onEvent({ type: 'status', message: `Corrigiendo: ${agentEntries.map((e) => e.name).join(' · ')}` });
-  for (const { name } of agentEntries) {
-    onEvent({ type: 'agent_start', agent: name });
-  }
+  for (const { name } of agentEntries) onEvent({ type: 'agent_start', agent: name });
 
   const results = await Promise.allSettled(
-    agentEntries.map(({ name, path }) => {
-      const existing = params.existingFiles.find((f) => f.path === path);
-      return runEditAgent(path, existing?.content ?? '', params, name, (chunk) =>
-        onEvent({ type: 'agent_log', agent: name, chunk })
-      );
-    })
+    agentEntries.map(({ name, files }) =>
+      runEditAgent(files, params, name, slugContext, (chunk) => onEvent({ type: 'agent_log', agent: name, chunk }))
+    )
   );
 
   const files: GeneratedFile[] = [];

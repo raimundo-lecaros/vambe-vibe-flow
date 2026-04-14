@@ -52,7 +52,6 @@ export default function StudioPage() {
     createdAt: Date.now(),
     generatedPage: gen.generatedPage,
     messages: gen.messages,
-    pageHistory: gen.pageHistory,
   });
 
   useEffect(() => {

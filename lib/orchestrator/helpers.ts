@@ -56,10 +56,7 @@ export function buildPageFile(plan: Plan): GeneratedFile {
   return {
     path: `app/(generated)/${plan.slug}/page.tsx`,
     content: `import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
 ${imports}
-
-const font = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
 export const metadata: Metadata = {
   title: '${metaTitle}',
@@ -80,7 +77,7 @@ const jsonLd = ${JSON.stringify(jsonLd, null, 2)};
 
 export default function Page() {
   return (
-    <main className={\`\${font.className} bg-zinc-950 text-white overflow-x-hidden\`}>
+    <main className="overflow-x-hidden">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

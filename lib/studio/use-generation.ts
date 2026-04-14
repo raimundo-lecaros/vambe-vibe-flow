@@ -27,9 +27,9 @@ export function useGeneration() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [creativityMode, setCreativityMode] = useState<CreativityMode>('modern');
   const [pageType, setPageType] = useState<PageType>('saas');
-  const [identityMode, setIdentityMode] = useState('vambe');
-  const [aestheticMode, setAestheticMode] = useState('vambe');
-  const [toneMode, setToneMode] = useState('directo');
+  const [identityMode, setIdentityMode] = useState('none');
+  const [aestheticMode, setAestheticMode] = useState('none');
+  const [toneMode, setToneMode] = useState('none');
 
   useEffect(() => {
     try {
@@ -121,7 +121,7 @@ export function useGeneration() {
     setSessionId(session.id);
     setMessages(session.messages);
     setGeneratedPage(session.generatedPage);
-    setPageHistory(session.pageHistory);
+    setPageHistory(session.generatedPage ? [session.generatedPage] : []);
   };
 
   const resetSession = () => {

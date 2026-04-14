@@ -2,7 +2,7 @@
 
 import type { Message, PendingInstall, GeneratedPage } from './types';
 
-type Setters = {
+export type Setters = {
   setGenStatus: (s: string) => void;
   setGenChars: (n: number) => void;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;

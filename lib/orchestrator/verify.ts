@@ -1,32 +1,42 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { typecheckSlug } from './typecheck';
+import { checkRuntimeRules } from './runtime-rules';
 import { autoFix } from './auto-fixer';
 
 const MAX_RETRIES = 2;
+const VERIFY_DISPLAY_MS = 2800;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export async function verifyAndFix(
   slug: string,
   projectRoot: string,
-  send: (data: unknown) => void
+  rawSend: (data: unknown) => void
 ): Promise<void> {
+  let closed = false;
+  const send = (data: unknown) => { if (!closed) { try { rawSend(data); } catch { closed = true; } } };
   const slugDir = path.join(projectRoot, 'app/(generated)', slug);
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     send({ type: 'agent_start', agent: 'Verificador' });
-    const errors = await typecheckSlug(slugDir);
+    const [errors,, violations] = await Promise.all([
+      typecheckSlug(slugDir, projectRoot),
+      sleep(VERIFY_DISPLAY_MS),
+      checkRuntimeRules(slugDir),
+    ]);
 
-    if (errors.length === 0) {
+    if (errors.length === 0 && violations.length === 0) {
       send({ type: 'agent_done', agent: 'Verificador', agentFiles: [] });
       return;
     }
 
-    send({ type: 'agent_error', agent: 'Verificador', message: `${errors.length} error(s)` });
-    send({ type: 'status', message: `AutoFix: corrigiendo ${errors.length} error(s)…` });
+    const total = errors.length + violations.length;
+    send({ type: 'agent_error', agent: 'Verificador', message: `${total} issue(s)` });
+    send({ type: 'status', message: `AutoFix: corrigiendo ${total} issue(s)…` });
     send({ type: 'agent_start', agent: 'AutoFix' });
 
     const fixes = await autoFix(
-      slugDir, slug, errors,
+      slugDir, slug, errors, violations,
       (chunk) => send({ type: 'agent_log', agent: 'AutoFix', chunk })
     );
 
@@ -41,11 +51,21 @@ export async function verifyAndFix(
   }
 
   send({ type: 'agent_start', agent: 'Verificador' });
-  const remaining = await typecheckSlug(slugDir);
-  if (remaining.length === 0) {
+  const [remaining,, finalViolations] = await Promise.all([
+    typecheckSlug(slugDir, projectRoot),
+    sleep(VERIFY_DISPLAY_MS),
+    checkRuntimeRules(slugDir),
+  ]);
+
+  const allRemaining = [
+    ...remaining,
+    ...finalViolations.map((v) => ({ file: v.file, message: v.rule })),
+  ];
+
+  if (allRemaining.length === 0) {
     send({ type: 'agent_done', agent: 'Verificador', agentFiles: [] });
   } else {
-    const msgs = remaining.slice(0, 3).map((e) => `${e.file}: ${e.message}`).join(' | ');
+    const msgs = allRemaining.slice(0, 3).map((e) => `${e.file}: ${e.message}`).join(' | ');
     send({ type: 'agent_error', agent: 'Verificador', message: msgs });
   }
 }
