@@ -75,7 +75,7 @@ export default function InputBar({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={selectedElement ? `Pedí cambios sobre <${selectedElement.tag}>…` : 'Describí tu landing… (Enter para generar)'}
+          placeholder={selectedElement ? `Pide cambios sobre <${selectedElement.tag}>…` : 'Describe tu página…'}
           rows={3}
           className="flex-1 text-[13px] rounded-xl px-3.5 py-2.5 resize-none focus:outline-none leading-relaxed"
           style={{ background: C.input, border: `1px solid ${C.border}`, color: C.text1 }}

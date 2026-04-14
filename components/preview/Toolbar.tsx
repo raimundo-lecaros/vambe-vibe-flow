@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Monitor, Smartphone, Crosshair, Folder, Undo2, ExternalLink, FlaskConical, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Monitor, Smartphone, Crosshair, Folder, Undo2, ExternalLink, FlaskConical } from 'lucide-react';
 import { C } from './constants';
-import type { GeneratedPage, TestResult } from './types';
+import type { GeneratedPage } from './types';
 
 interface ToolbarProps {
   generatedPage: GeneratedPage;
@@ -13,10 +13,9 @@ interface ToolbarProps {
   setSelectionMode: (v: boolean | ((prev: boolean) => boolean)) => void;
   showFiles: boolean;
   setShowFiles: (v: boolean | ((prev: boolean) => boolean)) => void;
-  testResult: TestResult | null;
   isTesting: boolean;
-  issueCount: number;
-  handleAutoTest: () => void;
+  showPanel: boolean;
+  onTogglePanel: () => void;
   onUndo?: () => void;
 }
 
@@ -28,10 +27,9 @@ export default function Toolbar({
   setSelectionMode,
   showFiles,
   setShowFiles,
-  testResult,
   isTesting,
-  issueCount,
-  handleAutoTest,
+  showPanel,
+  onTogglePanel,
   onUndo,
 }: ToolbarProps) {
   return (
@@ -75,24 +73,15 @@ export default function Toolbar({
 
       {/* QA button */}
       <button
-        onClick={handleAutoTest}
-        disabled={isTesting}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg disabled:opacity-50 transition-all"
-        style={
-          testResult?.passed
-            ? { background: '#0d2b14', color: '#4ade80', border: '1px solid #16a34a55' }
-            : testResult && issueCount > 0
-            ? { background: '#2b0d0d', color: '#f87171', border: '1px solid #dc262655' }
-            : { background: C.input, color: C.text2, border: `1px solid ${C.border}` }
-        }
+        onClick={onTogglePanel}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-all"
+        style={showPanel ? { background: C.border, color: C.text1, border: `1px solid ${C.borderHi}` } : { background: C.input, color: C.text2, border: `1px solid ${C.border}` }}
       >
         {isTesting
           ? <span className="w-3 h-3 rounded-full border border-current border-t-transparent inline-block" style={{ animation: 'spin 0.8s linear infinite' }} />
-          : testResult?.passed ? <CheckCircle size={12} />
-          : testResult && issueCount > 0 ? <AlertTriangle size={12} />
           : <FlaskConical size={12} />
         }
-        {isTesting ? 'Analizando…' : testResult?.passed ? 'Sin issues' : testResult && issueCount > 0 ? `${issueCount} issue${issueCount > 1 ? 's' : ''}` : 'Test UI'}
+        Test UI
       </button>
 
       {/* Files */}

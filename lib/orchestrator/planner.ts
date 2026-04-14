@@ -12,37 +12,45 @@ export async function runPlanner(params: OrchestrateParams): Promise<Plan> {
     const mt = (params.mediaType ?? 'image/jpeg') as SupportedMediaType;
     userContent.push({ type: 'image', source: { type: 'base64', media_type: mt, data: params.imageBase64 } });
   }
-  userContent.push({ type: 'text', text: params.userPrompt });
+  const promptText = [params.creativityPrefix, params.userPrompt].filter(Boolean).join('\n\n');
+  userContent.push({ type: 'text', text: promptText });
 
   const system = `Eres un arquitecto de landing pages especialista en SEO y GEO (Generative Engine Optimization).
-Respondés SOLO con JSON válido, sin markdown ni texto extra.
 
 Contexto de diseño para esta sesión:
 ${params.designBrief}
 
+Dado un brief, respondé en DOS bloques exactos, en este orden:
 
-Dado un brief, planificás la estructura completa de la landing:
+Bloque 1 — JSON de arquitectura (sin markdown):
 {
   "slug": "url-slug-en-minusculas-con-guiones",
   "summary": "descripción en 1 línea de qué hace el producto",
   "components": ["Hero", "Features", "Pricing", "FAQ", "CTA"],
-  "interfaces": "export interface HeroData { ... }\\nexport interface FeatureItem { ... }\\n...",
+  "complexComponents": ["Pricing"],
   "deps": [],
   "metaTitle": "Keyword Principal - Propuesta de Valor | Empresa (max 60 chars)",
   "metaDescription": "Descripción accionable con keyword principal + beneficio clave (max 155 chars)",
   "schemaType": "SoftwareApplication"
 }
 
+Bloque 2 — Interfaces TypeScript (sin markdown):
+===INTERFACES===
+export interface HeroData { ... }
+export interface FeatureItem { ... }
+===END===
+
 Reglas:
 - slug: URL-safe, solo minúsculas y guiones
-- components: PascalCase, máximo 7, ordenados por posición. SIEMPRE incluí "FAQ" — es obligatorio para SEO/GEO
-- interfaces: TypeScript válido, una interface por sección. CRÍTICO: los campos de ícono SIEMPRE se llaman iconKey: string (nunca icon: string — eso causa renderizado como texto plano)
+- components: PascalCase, máximo 7, ordenados por posición. Los nombres deben reflejar el brief y el tipo de producto. FAQ recomendado para SaaS/servicios/productos; opcional para portfolios y editoriales
+- complexComponents: subconjunto de components que requieren lógica interactiva avanzada (calculadoras, sliders con estado, demos animadas, tablas con filtros/sorting, modales con formularios complejos, comparadores). Componentes puramente visuales o de contenido NO van aquí
 - deps: SOLO paquetes no disponibles en: ${params.installedDeps.join(', ')}
 - metaTitle: incluye keyword principal, max 60 chars, termina en "| [Marca]"
 - metaDescription: responde "¿qué hace X para Y?", max 155 chars, incluye métrica concreta si aplica
 - schemaType: uno de SoftwareApplication | LocalBusiness | Product | Organization | Service
+- interfaces: TypeScript válido, una interface por componente. Los campos de ícono SIEMPRE se llaman iconKey: string (nunca icon: string)
 
-Respondé ÚNICAMENTE con el JSON.`;
+Respondé ÚNICAMENTE con los dos bloques, sin texto adicional.`;
 
   const resp = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -53,20 +61,21 @@ Respondé ÚNICAMENTE con el JSON.`;
   });
 
   const text = extractText(resp);
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Planner no devolvió JSON válido');
 
-  const plan = JSON.parse(match[0]) as Partial<Plan>;
+  const jsonMatch = text.match(/\{[\s\S]*?\}/);
+  if (!jsonMatch) throw new Error('Planner no devolvió JSON válido');
+  const plan = JSON.parse(jsonMatch[0]) as Partial<Plan>;
   if (!plan.slug || !plan.components?.length) throw new Error('Plan incompleto: falta slug o components');
 
-  // Ensure FAQ is always present
-  if (!plan.components.includes('FAQ')) plan.components.push('FAQ');
+  const ifaceMatch = text.match(/===INTERFACES===([\s\S]*?)===END===/);
+  const interfaces = ifaceMatch ? ifaceMatch[1].trim() : '';
 
   return {
     slug: plan.slug,
     summary: plan.summary ?? '',
     components: plan.components,
-    interfaces: plan.interfaces ?? '',
+    complexComponents: plan.complexComponents ?? [],
+    interfaces,
     deps: plan.deps ?? [],
     metaTitle: plan.metaTitle ?? plan.summary ?? '',
     metaDescription: plan.metaDescription ?? '',

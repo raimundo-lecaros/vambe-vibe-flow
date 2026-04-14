@@ -24,7 +24,7 @@ export async function orchestrate(
   }
 
   const componentPromises = plan.components.map((name) =>
-    runComponentAgent(name, plan, params, (chunk) =>
+    runComponentAgent(name, plan, params, plan.complexComponents.includes(name), (chunk) =>
       onEvent({ type: 'agent_log', agent: name, chunk })
     )
   );

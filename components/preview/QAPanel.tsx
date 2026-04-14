@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CheckCircle, AlertTriangle, Smartphone, Monitor, Wrench, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Smartphone, Monitor, Wrench, ChevronDown, ChevronUp, ChevronRight, X, FlaskConical } from 'lucide-react';
 import { C, SEVERITY_COLOR, CATEGORY_ICONS } from './constants';
 import type { TestResult } from './types';
-import type { Issue } from '@/lib/visual-tester';
 
-interface QAPanelProps {
+interface Props {
+  show: boolean;
+  onClose: () => void;
+  onRunTest: () => void;
   testResult: TestResult | null;
   isTesting: boolean;
   issueCount: number;
@@ -17,115 +19,109 @@ interface QAPanelProps {
   toggleIssue: (id: string) => void;
   handleApplySelected: () => void;
   isGenerating: boolean;
-  onApplyFixes?: (issues: Issue[]) => void;
 }
 
-export default function QAPanel({ testResult, isTesting, issueCount, screenshotMode, setScreenshotMode, selectedIssueIds, setSelectedIssueIds, toggleIssue, handleApplySelected, isGenerating, onApplyFixes }: QAPanelProps) {
+export default function QAPanel({ show, onClose, onRunTest, testResult, isTesting, issueCount, screenshotMode, setScreenshotMode, selectedIssueIds, setSelectedIssueIds, toggleIssue, handleApplySelected, isGenerating }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (!testResult && !isTesting) return null;
+  if (!show) return null;
 
-  if (isTesting) {
-    return (
-      <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, background: C.panel }}>
-        <div className="flex items-center gap-2.5 px-4 py-3 text-[12px]" style={{ color: C.text3 }}>
-          <span className="w-3 h-3 rounded-full border border-t-transparent inline-block shrink-0" style={{ animation: 'spin 0.8s linear infinite', borderColor: C.text3 }} />
-          Analizando con Playwright + Claude Vision…
-        </div>
-      </div>
-    );
-  }
-
-  if (!testResult) return null;
+  const issues = testResult?.issues ?? [];
 
   return (
-    <div className="shrink-0 flex flex-col" style={{ borderBottom: `1px solid ${C.border}`, background: C.panel, maxHeight: collapsed ? 'none' : '55vh', overflowY: collapsed ? 'visible' : 'auto' }}>
-      <div className="flex items-center gap-2 px-4 py-2.5 shrink-0" style={{ borderBottom: collapsed ? 'none' : `1px solid ${C.border}` }}>
-        {testResult.passed
-          ? <CheckCircle size={13} className="text-emerald-400 shrink-0" />
-          : <AlertTriangle size={13} className="text-amber-400 shrink-0" />
+    <div style={{ position: 'absolute', top: 8, right: 8, width: 340, maxHeight: 'calc(100% - 16px)', zIndex: 50, display: 'flex', flexDirection: 'column', borderRadius: 10, border: `1px solid ${C.border}`, background: C.panel, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 shrink-0" style={{ borderBottom: collapsed ? 'none' : `1px solid ${C.border}` }}>
+        {isTesting
+          ? <span className="w-3 h-3 rounded-full border border-t-transparent shrink-0" style={{ animation: 'spin 0.8s linear infinite', borderColor: C.text3 }} />
+          : testResult?.passed ? <CheckCircle size={12} className="text-emerald-400 shrink-0" />
+          : testResult ? <AlertTriangle size={12} className="text-amber-400 shrink-0" />
+          : <FlaskConical size={12} className="shrink-0" style={{ color: C.text3 }} />
         }
-        <span className="text-[12px] font-medium" style={{ color: C.text1 }}>
-          {testResult.passed ? 'Sin issues' : `${issueCount} observaciones`}
+        <span className="text-[12px] font-medium flex-1" style={{ color: C.text1 }}>
+          {isTesting ? 'Analizando…' : testResult?.passed ? 'Sin issues' : testResult ? `${issueCount} observaciones` : 'QA Test'}
         </span>
-        {!collapsed && (testResult.issues?.length ?? 0) > 0 && (
-          <div className="flex gap-2 ml-2">
-            <button onClick={() => setSelectedIssueIds(new Set((testResult.issues ?? []).map((i) => i.id)))} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">Todos</button>
-            <span style={{ color: C.text3 }}>·</span>
-            <button onClick={() => setSelectedIssueIds(new Set())} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">Ninguno</button>
-          </div>
-        )}
-        {!collapsed && (
-          <div className="flex gap-1 ml-auto mr-1">
-            {(['desktop', 'mobile', 'desktop2'] as const).map((mode) => (
-              <button key={mode} onClick={() => setScreenshotMode(screenshotMode === mode ? null : mode)} className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-all" style={screenshotMode === mode ? { background: '#006AFF', color: 'white' } : { background: '#1a1a1c', color: '#52525b', border: '1px solid #27272a' }}>
-                {mode === 'mobile' ? <Smartphone size={9} /> : <Monitor size={9} />}
-                {mode === 'desktop2' ? '+2s' : ''}
-              </button>
-            ))}
-          </div>
-        )}
-        <button onClick={() => setCollapsed((c) => !c)} className="shrink-0 transition-colors" style={{ color: C.text3, marginLeft: collapsed ? 'auto' : undefined }}>
-          {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+        <button onClick={onRunTest} disabled={isTesting} className="text-[10px] px-2 py-1 rounded-md disabled:opacity-40 transition-all" style={{ background: C.accent + '22', color: C.accent, border: `1px solid ${C.accent}44` }}>
+          {isTesting ? '…' : 'Ejecutar'}
+        </button>
+        <button onClick={() => setCollapsed((c) => !c)} className="p-0.5 transition-colors" style={{ color: C.text3 }}>
+          {collapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+        </button>
+        <button onClick={onClose} className="p-0.5 transition-colors" style={{ color: C.text3 }}>
+          <X size={12} />
         </button>
       </div>
 
-      {!collapsed && screenshotMode && (() => {
-        const data = screenshotMode === 'desktop' ? testResult.desktopScreenshot : screenshotMode === 'desktop2' ? testResult.desktopScreenshot2 : testResult.mobileScreenshot;
-        if (!data) return <div className="px-4 py-3 text-[11px] shrink-0" style={{ color: C.text3, background: '#080808', borderBottom: '1px solid #1f1f23' }}>Screenshot no disponible</div>;
-        return (
-          <div className="px-4 py-3 shrink-0" style={{ background: '#080808', borderBottom: '1px solid #1f1f23' }}>
-            <img src={`data:image/jpeg;base64,${data}`} alt={screenshotMode} className="w-full rounded-lg border" style={{ maxHeight: '200px', objectFit: 'cover', objectPosition: 'top', borderColor: '#27272a' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-          </div>
-        );
-      })()}
+      {!collapsed && (
+        <div className="flex flex-col overflow-y-auto flex-1">
+          {!isTesting && issues.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+              <button onClick={() => setSelectedIssueIds(new Set(issues.map((i) => i.id)))} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">Todos</button>
+              <span style={{ color: C.text3 }}>·</span>
+              <button onClick={() => setSelectedIssueIds(new Set())} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">Ninguno</button>
+              <div className="flex gap-1 ml-auto">
+                {(['desktop', 'mobile', 'desktop2'] as const).map((mode) => (
+                  <button key={mode} onClick={() => setScreenshotMode(screenshotMode === mode ? null : mode)}
+                    className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded"
+                    style={screenshotMode === mode ? { background: '#006AFF', color: 'white' } : { background: '#1a1a1c', color: '#52525b', border: '1px solid #27272a' }}>
+                    {mode === 'mobile' ? <Smartphone size={9} /> : <Monitor size={9} />}
+                    {mode === 'desktop2' ? '+2s' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {!collapsed && (testResult.domMetrics?.hasHorizontalOverflow || (testResult.domMetrics?.consoleErrors?.length ?? 0) > 0 || (testResult.domMetrics?.brokenIcons?.length ?? 0) > 0 || (testResult.domMetrics?.overlaps?.length ?? 0) > 0) && (
-        <div className="flex flex-wrap gap-2 px-4 py-2 shrink-0" style={{ background: '#0d0d0f', borderBottom: '1px solid #1f1f23' }}>
-          {testResult.domMetrics.hasHorizontalOverflow && <span className="text-[10px] text-red-400 bg-red-950/50 border border-red-900/50 px-2 py-0.5 rounded-full">Overflow horizontal</span>}
-          {(testResult.domMetrics.brokenIcons ?? []).map((icon, i) => <span key={i} className="text-[10px] text-amber-400 bg-amber-950/50 border border-amber-900/50 px-2 py-0.5 rounded-full font-mono">icono roto: {icon}</span>)}
-          {(testResult.domMetrics.overlaps ?? []).map((o, i) => <span key={i} className="text-[10px] text-orange-400 bg-orange-950/50 border border-orange-900/50 px-2 py-0.5 rounded-full font-mono">overlap: {o.elementA} ∩ {o.elementB}</span>)}
-          {(testResult.domMetrics.consoleErrors ?? []).map((e, i) => <span key={i} className="text-[10px] text-red-400 bg-red-950/50 border border-red-900/50 px-2 py-0.5 rounded-full font-mono truncate max-w-[200px]">{e}</span>)}
-        </div>
-      )}
+          {screenshotMode && (() => {
+            const data = screenshotMode === 'desktop' ? testResult?.desktopScreenshot : screenshotMode === 'desktop2' ? testResult?.desktopScreenshot2 : testResult?.mobileScreenshot;
+            if (!data) return null;
+            return (
+              <div className="px-3 py-2.5 shrink-0" style={{ background: '#080808', borderBottom: `1px solid ${C.border}` }}>
+                <img src={`data:image/jpeg;base64,${data}`} alt={screenshotMode} className="w-full rounded-lg border" style={{ maxHeight: 160, objectFit: 'cover', objectPosition: 'top', borderColor: '#27272a' }} />
+              </div>
+            );
+          })()}
 
-      {!collapsed && (testResult.issues?.length ?? 0) > 0 && (
-        <div className="divide-y divide-zinc-900">
-          {['critical', 'warning', 'suggestion'].map((sev) => {
-            const sevIssues = (testResult.issues ?? []).filter((i) => i.severity === sev);
-            if (sevIssues.length === 0) return null;
-            const colors = SEVERITY_COLOR[sev as keyof typeof SEVERITY_COLOR];
-            return sevIssues.map((issue) => (
-              <label key={issue.id} className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors" style={{ background: selectedIssueIds.has(issue.id) ? colors.bg : '#0a0a0b' }} onMouseEnter={(e) => { if (!selectedIssueIds.has(issue.id)) (e.currentTarget as HTMLElement).style.background = '#0d0d0f'; }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = selectedIssueIds.has(issue.id) ? colors.bg : '#0a0a0b'; }}>
-                <div className="relative shrink-0 mt-0.5">
-                  <input type="checkbox" checked={selectedIssueIds.has(issue.id)} onChange={() => toggleIssue(issue.id)} className="sr-only" />
-                  <div className="w-4 h-4 rounded flex items-center justify-center transition-all" style={{ background: selectedIssueIds.has(issue.id) ? colors.dot : 'transparent', border: `1.5px solid ${selectedIssueIds.has(issue.id) ? colors.dot : '#3f3f46'}` }}>
-                    {selectedIssueIds.has(issue.id) && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          {issues.length > 0 && (
+            <div className="divide-y divide-zinc-900 flex-1">
+              {issues.map((issue) => {
+                const colors = SEVERITY_COLOR[issue.severity as keyof typeof SEVERITY_COLOR];
+                const isExpanded = expandedId === issue.id;
+                return (
+                  <div key={issue.id} style={{ background: selectedIssueIds.has(issue.id) ? colors.bg : 'transparent' }}>
+                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer select-none" onClick={() => setExpandedId(isExpanded ? null : issue.id)}>
+                      <div className="shrink-0" onClick={(e) => { e.stopPropagation(); toggleIssue(issue.id); }}>
+                        <div className="w-3.5 h-3.5 rounded flex items-center justify-center" style={{ background: selectedIssueIds.has(issue.id) ? colors.dot : 'transparent', border: `1.5px solid ${selectedIssueIds.has(issue.id) ? colors.dot : '#3f3f46'}` }}>
+                          {selectedIssueIds.has(issue.id) && <svg width="7" height="5" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                      </div>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: colors.dot }} />
+                      <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide truncate flex-1">{issue.component}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}>
+                        {CATEGORY_ICONS[issue.category]}{issue.category}
+                      </span>
+                      <span style={{ color: C.text3 }}>{isExpanded ? <ChevronUp size={10} /> : <ChevronRight size={10} />}</span>
+                    </div>
+                    {isExpanded && (
+                      <div className="px-3 pb-2.5" style={{ borderTop: `1px solid ${C.border}` }}>
+                        <p className="text-[11px] text-zinc-300 leading-relaxed mt-2 mb-1">{issue.description}</p>
+                        <p className="text-[10px] leading-relaxed" style={{ color: C.text3 }}><span className="text-zinc-600">Fix: </span>{issue.fixHint}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: colors.dot }} />
-                    <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">{issue.component}</span>
-                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}>
-                      {CATEGORY_ICONS[issue.category]}{issue.category}
-                    </span>
-                  </div>
-                  <p className="text-[12px] text-zinc-200 leading-relaxed">{issue.description}</p>
-                  {selectedIssueIds.has(issue.id) && <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed"><span className="text-zinc-600">Fix: </span>{issue.fixHint}</p>}
-                </div>
-              </label>
-            ));
-          })}
-        </div>
-      )}
+                );
+              })}
+            </div>
+          )}
 
-      {!collapsed && selectedIssueIds.size > 0 && onApplyFixes && (
-        <div className="px-4 py-3 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
-          <button onClick={handleApplySelected} disabled={isGenerating} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-40" style={{ background: C.accent }}>
-            <Wrench size={14} />
-            Aplicar {selectedIssueIds.size} cambio{selectedIssueIds.size > 1 ? 's' : ''}
-          </button>
+          {selectedIssueIds.size > 0 && (
+            <div className="px-3 py-2.5 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
+              <button onClick={handleApplySelected} disabled={isGenerating} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40" style={{ background: C.accent }}>
+                <Wrench size={13} />
+                Aplicar {selectedIssueIds.size} cambio{selectedIssueIds.size > 1 ? 's' : ''}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

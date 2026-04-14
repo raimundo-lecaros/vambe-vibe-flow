@@ -7,6 +7,7 @@ export interface Plan {
   slug: string;
   summary: string;
   components: string[];
+  complexComponents: string[];
   interfaces: string;
   deps: string[];
   metaTitle: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import type { TestResult, GeneratedPage } from '../types';
 import type { Issue } from '@/lib/visual-tester';
 
@@ -11,12 +11,15 @@ export function useQATest(
 ) {
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [showPanel, setShowPanel] = useState(false);
   const [screenshotMode, setScreenshotMode] = useState<'desktop' | 'desktop2' | 'mobile' | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
-  const prevSlugRef = useRef<string | null>(null);
+
+  void isGenerating;
 
   const handleAutoTest = async () => {
     if (!generatedPage) return;
+    setShowPanel(true);
     setIsTesting(true);
     setTestResult(null);
     setSelectedIssueIds(new Set());
@@ -35,48 +38,28 @@ export function useQATest(
         clearTimeout(timeoutId);
       }
       const json = (await res.json()) as TestResult & { error?: string };
-
       if (!res.ok || json.error) {
         setTestResult({
-          desktopScreenshot: '',
-          mobileScreenshot: '',
-          desktopScreenshot2: '',
-          issues: [{
-            id: `runner-error-${Date.now()}`,
-            component: 'Test Runner',
-            category: 'error',
-            severity: 'critical',
-            description: `Playwright falló: ${json.error ?? `HTTP ${res.status}`}. Verificá que Playwright esté instalado y que el servidor esté corriendo.`,
-            fixHint: 'Ejecutar: npx playwright install --with-deps. Si el error persiste, revisar los logs del servidor.',
+          desktopScreenshot: '', mobileScreenshot: '', desktopScreenshot2: '',
+          issues: [{ id: `runner-error-${Date.now()}`, component: 'Test Runner', category: 'error', severity: 'critical',
+            description: `Playwright falló: ${json.error ?? `HTTP ${res.status}`}`,
+            fixHint: 'Ejecutar: npx playwright install --with-deps',
           }],
           domMetrics: { hasHorizontalOverflow: false, consoleErrors: [], stuckAnimations: [], smallTapTargets: 0, smallTextElements: 0, brokenImages: 0, brokenIcons: [], overlaps: [] },
           passed: false,
         });
         return;
       }
-
       setTestResult(json);
-      const autoSelected = new Set(
-        (json.issues ?? [])
-          .filter((i) => i.severity === 'critical' || i.severity === 'warning')
-          .map((i) => i.id)
-      );
-      setSelectedIssueIds(autoSelected);
+      setSelectedIssueIds(new Set(
+        (json.issues ?? []).filter((i) => i.severity === 'critical' || i.severity === 'warning').map((i) => i.id)
+      ));
     } catch (err) {
-      const isAbort = err instanceof Error && err.name === 'AbortError';
-      const errMsg = isAbort ? 'Timeout de 2 minutos alcanzado' : String(err);
-      console.error('Auto-test failed:', err);
+      const errMsg = err instanceof Error && err.name === 'AbortError' ? 'Timeout de 2 minutos' : String(err);
       setTestResult({
-        desktopScreenshot: '',
-        mobileScreenshot: '',
-        desktopScreenshot2: '',
-        issues: [{
-          id: `runner-error-${Date.now()}`,
-          component: 'Test Runner',
-          category: 'error',
-          severity: 'critical',
-          description: `Error al llamar al test runner: ${errMsg}. Podés reintentar con el botón Test.`,
-          fixHint: 'Si el error persiste, verificar que el servidor Next.js esté corriendo en localhost:3000.',
+        desktopScreenshot: '', mobileScreenshot: '', desktopScreenshot2: '',
+        issues: [{ id: `runner-error-${Date.now()}`, component: 'Test Runner', category: 'error', severity: 'critical',
+          description: `Error: ${errMsg}`, fixHint: 'Verificar que el servidor esté corriendo en localhost:3000',
         }],
         domMetrics: { hasHorizontalOverflow: false, consoleErrors: [], stuckAnimations: [], smallTapTargets: 0, smallTextElements: 0, brokenImages: 0, brokenIcons: [], overlaps: [] },
         passed: false,
@@ -89,40 +72,20 @@ export function useQATest(
   const toggleIssue = (id: string) => {
     setSelectedIssueIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
   const handleApplySelected = () => {
     if (!testResult || selectedIssueIds.size === 0) return;
-    const selected = testResult.issues.filter((i) => selectedIssueIds.has(i.id));
-    onApplyFixes?.(selected);
+    onApplyFixes?.(testResult.issues.filter((i) => selectedIssueIds.has(i.id)));
   };
 
-  // Auto-run QA when a new page is generated (3s delay for Next.js compilation)
-  useEffect(() => {
-    if (!generatedPage || generatedPage.slug === prevSlugRef.current) return;
-    prevSlugRef.current = generatedPage.slug;
-    setTestResult(null);
-    const timer = setTimeout(() => void handleAutoTest(), 8000);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generatedPage?.slug]);
-
-  // Suppress unused warning — isGenerating used by callers to disable apply button
-  void isGenerating;
-
   return {
-    testResult,
-    isTesting,
-    screenshotMode,
-    setScreenshotMode,
-    selectedIssueIds,
-    setSelectedIssueIds,
-    handleAutoTest,
-    toggleIssue,
-    handleApplySelected,
+    testResult, isTesting, showPanel, setShowPanel,
+    screenshotMode, setScreenshotMode,
+    selectedIssueIds, setSelectedIssueIds,
+    handleAutoTest, toggleIssue, handleApplySelected,
   };
 }

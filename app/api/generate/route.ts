@@ -2,13 +2,13 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { orchestrate, orchestrateEdit, type OrchestratorEvent } from '@/lib/orchestrator';
-import { readDesignBrief, type BrandMode } from '@/lib/designer';
+import { readCombinedBrief } from '@/lib/designer';
 import { writeAndFinish, type ParsedResponse } from './write-files';
 
 const CREATIVITY_PREFIXES: Record<string, string> = {
-  disruptive: 'Sé audaz. Layout no convencional. Al menos 1 componente tiene que ser algo inesperado en una landing típica.',
-  corporate: 'Diseño limpio y conservador. Sin overlaps ni riesgos.',
-  modern: 'Contemporáneo con personalidad. Mezcla fondos y formas.',
+  disruptive: 'Layout no convencional. Al menos un componente rompe el grid típico de una landing. Sé inesperado en estructura',
+  corporate: 'Estructura conservadora y predecible. Secciones estándar bien ejecutadas. Sin experimentos de layout.',
+  modern: 'Layout contemporáneo. Jerarquía tipográfica fuerte. Componentes con personalidad manteniendo coherencia con el brief visual.',
 };
 
 interface SelectedElement {
@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
           slug?: string;
           currentSlug?: string;
           creativityMode?: string;
-          brandMode?: BrandMode;
+          identityMode?: string;
+          aestheticMode?: string;
+          toneMode?: string;
           pageType?: string;
           imageBase64?: string;
           mediaType?: string;
@@ -83,11 +85,11 @@ export async function POST(request: NextRequest) {
           qaIssues?: { component: string; description: string; fixHint: string }[];
         };
 
-        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', brandMode = 'vambe', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
+        const { messages, slug: requestedSlug, currentSlug, creativityMode = 'modern', identityMode = 'none', aestheticMode = 'none', toneMode = 'none', pageType, imageBase64, mediaType, selectedElement, fixMode, qaIssues } = body;
         const projectRoot = process.cwd();
         const prefix = fixMode ? '' : (CREATIVITY_PREFIXES[creativityMode] ?? '');
-        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' || brandMode === 'libre' ? 0.9 : 0.3);
-        const designBrief = await readDesignBrief(brandMode);
+        const temperature = fixMode ? 0 : (creativityMode === 'disruptive' ? 0.9 : 0.3);
+        const designBrief = await readCombinedBrief(identityMode, aestheticMode, toneMode);
 
         let installedDeps: string[] = [];
         try {
